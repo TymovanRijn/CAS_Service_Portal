@@ -386,6 +386,96 @@ const releaseAction = async (req, res) => {
   }
 };
 
+// Update action (general update for description, status, notes)
+const updateAction = async (req, res) => {
+  const { id } = req.params;
+  const { action_description, status, notes } = req.body;
+  
+  try {
+    const client = await pool.connect();
+    
+    // Check if action exists and user has permission
+    const actionCheck = await client.query(`
+      SELECT id, assigned_to, created_by, status as current_status
+      FROM Actions 
+      WHERE id = $1
+    `, [id]);
+    
+    if (actionCheck.rows.length === 0) {
+      client.release();
+      return res.status(404).json({ message: 'Action not found' });
+    }
+    
+    const action = actionCheck.rows[0];
+    
+    // Check permissions: only assigned user, creator, or admin can update
+    const userRole = req.user.role || 'SAC';
+    const canUpdate = action.assigned_to === req.user.userId || 
+                     action.created_by === req.user.userId || 
+                     userRole === 'Admin';
+    
+    if (!canUpdate) {
+      client.release();
+      return res.status(403).json({ message: 'Not authorized to update this action' });
+    }
+    
+    // Build dynamic update query
+    let updateFields = [];
+    let queryParams = [];
+    let paramIndex = 1;
+    
+    if (action_description) {
+      updateFields.push(`action_description = $${paramIndex}`);
+      queryParams.push(action_description);
+      paramIndex++;
+    }
+    
+    if (status) {
+      const validStatuses = ['Pending', 'In Progress', 'Completed'];
+      if (!validStatuses.includes(status)) {
+        client.release();
+        return res.status(400).json({ message: 'Invalid status' });
+      }
+      updateFields.push(`status = $${paramIndex}`);
+      queryParams.push(status);
+      paramIndex++;
+    }
+    
+    if (notes) {
+      updateFields.push(`notes = $${paramIndex}`);
+      queryParams.push(notes);
+      paramIndex++;
+    }
+    
+    if (updateFields.length === 0) {
+      client.release();
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+    
+    // Always update the updated_at timestamp
+    updateFields.push('updated_at = CURRENT_TIMESTAMP');
+    
+    const updateQuery = `
+      UPDATE Actions 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    queryParams.push(id);
+    
+    const result = await client.query(updateQuery, queryParams);
+    
+    client.release();
+    res.json({ 
+      message: 'Action updated successfully',
+      action: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Error updating action:', err);
+    res.status(500).json({ message: 'Error updating action' });
+  }
+};
+
 // Update action status (only by assigned user or admin)
 const updateActionStatus = async (req, res) => {
   const { id } = req.params;
@@ -523,6 +613,7 @@ module.exports = {
   createAction,
   takeAction,
   releaseAction,
+  updateAction,
   updateActionStatus,
   getActionStats,
   getAvailableUsers

@@ -6,6 +6,7 @@ const {
   createAction, 
   takeAction,
   releaseAction,
+  updateAction,
   updateActionStatus,
   getActionStats,
   getAvailableUsers
@@ -40,6 +41,9 @@ router.put('/:id/take', requireRole(['SAC', 'Admin']), takeAction);
 
 // Release action (unassign from current user)
 router.put('/:id/release', requireRole(['SAC', 'Admin']), releaseAction);
+
+// Update action (general update)
+router.put('/:id', requireRole(['SAC', 'Admin']), updateAction);
 
 // Update action status
 router.put('/:id/status', requireRole(['SAC', 'Admin']), updateActionStatus);

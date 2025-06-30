@@ -15,9 +15,15 @@ const port = process.env.PORT || 3001;
 // Connect to the database
 connectDB();
 
-// Improved CORS configuration
+// Network-friendly CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: [
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000',
+    'http://10.41.68.202:3000',  // Je netwerk IP
+    /^http:\/\/192\.168\.\d+\.\d+:3000$/,  // Lokale netwerk range
+    /^http:\/\/10\.\d+\.\d+\.\d+:3000$/    // Andere lokale netwerk ranges
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   credentials: true
@@ -27,9 +33,21 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Additional CORS headers for preflight requests
+// Enhanced CORS headers for network access
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || 'http://localhost:3000');
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000', 
+    'http://10.41.68.202:3000'
+  ];
+  
+  // Allow any local network origin for development
+  if (origin && (allowedOrigins.includes(origin) || 
+      origin.match(/^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):3000$/))) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -55,7 +73,10 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/admin', userRoutes);
 app.use('/api', categoryRoutes);
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  console.log(`Test the server at: http://localhost:${port}`);
+// Listen on all interfaces (0.0.0.0) for network access
+app.listen(port, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${port}`);
+  console.log(`📍 Local access: http://localhost:${port}`);
+  console.log(`🌐 Network access: http://10.41.68.202:${port}`);
+  console.log(`🔗 Test the server at: http://10.41.68.202:${port}`);
 });

@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { CreateActionModal } from './CreateActionModal';
+import { ActionDetailModal } from './ActionDetailModal';
 import { useAuth } from '../contexts/AuthContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
@@ -23,6 +24,7 @@ interface Action {
   incident_status: string;
   category_name?: string;
   location_name?: string;
+  notes?: string;
 }
 
 interface ActionStats {
@@ -67,6 +69,8 @@ export const ActionManagement: React.FC = () => {
   const [currentView, setCurrentView] = useState<'pending' | 'all' | 'archive'>('pending');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
+  const [isActionDetailModalOpen, setIsActionDetailModalOpen] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -295,6 +299,18 @@ export const ActionManagement: React.FC = () => {
   const handleActionCreated = () => {
     fetchActions();
     fetchActionStats();
+  };
+
+  const handleActionClick = (action: Action) => {
+    setSelectedAction(action);
+    setIsActionDetailModalOpen(true);
+  };
+
+  const handleActionUpdated = () => {
+    fetchActions();
+    fetchActionStats();
+    setIsActionDetailModalOpen(false);
+    setSelectedAction(null);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -653,7 +669,8 @@ export const ActionManagement: React.FC = () => {
               {actions.map((action) => (
                 <div
                   key={action.id}
-                  className="p-3 sm:p-4 border rounded-lg hover:shadow-sm transition-all duration-200 card-interactive"
+                  className="p-3 sm:p-4 border rounded-lg hover:shadow-sm transition-all duration-200 card-interactive cursor-pointer"
+                  onClick={() => handleActionClick(action)}
                 >
                   {/* Mobile-first Action Header */}
                   <div className="flex flex-col space-y-2 sm:space-y-3">
@@ -684,7 +701,10 @@ export const ActionManagement: React.FC = () => {
                       {canTakeAction(action) && (
                         <Button
                           size="sm"
-                          onClick={() => handleTakeAction(action.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTakeAction(action.id);
+                          }}
                           className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm touch-manipulation"
                         >
                           <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -699,7 +719,10 @@ export const ActionManagement: React.FC = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleUpdateStatus(action.id, 'Completed')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateStatus(action.id, 'Completed');
+                            }}
                             className="border-green-200 text-green-700 hover:bg-green-50 text-xs sm:text-sm touch-manipulation"
                           >
                             <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -712,7 +735,10 @@ export const ActionManagement: React.FC = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleReleaseAction(action.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReleaseAction(action.id);
+                              }}
                               className="border-orange-200 text-orange-700 hover:bg-orange-50 text-xs sm:text-sm touch-manipulation"
                             >
                               <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -867,6 +893,21 @@ export const ActionManagement: React.FC = () => {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleActionCreated}
         availableUsers={availableUsers}
+      />
+
+      {/* Action Detail Modal */}
+      <ActionDetailModal
+        isOpen={isActionDetailModalOpen}
+        onClose={() => {
+          setIsActionDetailModalOpen(false);
+          setSelectedAction(null);
+        }}
+        action={selectedAction}
+        onActionUpdated={handleActionUpdated}
+        onSuccess={() => {
+          setIsActionDetailModalOpen(false);
+          setSelectedAction(null);
+        }}
       />
     </div>
   );

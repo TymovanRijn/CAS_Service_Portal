@@ -117,9 +117,16 @@ async function setupDatabase() {
         status VARCHAR(50) DEFAULT 'Pending',
         assigned_to INTEGER REFERENCES Users(id),
         created_by INTEGER REFERENCES Users(id),
+        notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Add notes column to existing Actions table if it doesn't exist
+    await client.query(`
+      ALTER TABLE Actions 
+      ADD COLUMN IF NOT EXISTS notes TEXT
     `);
     
     // Create IncidentAttachments table

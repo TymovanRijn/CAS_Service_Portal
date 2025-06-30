@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { CreateIncidentModal } from './CreateIncidentModal';
 import { CreateActionModal } from './CreateActionModal';
 import { IncidentDetailModal } from './IncidentDetailModal';
+import { ActionDetailModal } from './ActionDetailModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -39,6 +40,10 @@ interface Action {
   created_at: string;
   updated_at: string;
   due_date?: string;
+  notes?: string;
+  category_name?: string;
+  location_name?: string;
+  incident_status?: string;
 }
 
 interface IncidentStats {
@@ -84,6 +89,8 @@ export const Dashboard: React.FC = () => {
   const [isCreateActionModalOpen, setIsCreateActionModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isIncidentDetailModalOpen, setIsIncidentDetailModalOpen] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
+  const [isActionDetailModalOpen, setIsActionDetailModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Only fetch data for SAC users
@@ -233,6 +240,17 @@ export const Dashboard: React.FC = () => {
     fetchDashboardData();
     setIsIncidentDetailModalOpen(false);
     setSelectedIncident(null);
+  };
+
+  const handleActionClick = (action: Action) => {
+    setSelectedAction(action);
+    setIsActionDetailModalOpen(true);
+  };
+
+  const handleActionUpdated = () => {
+    fetchDashboardData();
+    setIsActionDetailModalOpen(false);
+    setSelectedAction(null);
   };
 
   const getRoleIcon = (role: string) => {
@@ -524,7 +542,11 @@ export const Dashboard: React.FC = () => {
                     </div>
                   ) : (
                     pendingActions.map((action) => (
-                      <div key={action.id} className="p-3 border rounded-lg hover:shadow-sm transition-shadow">
+                      <div 
+                        key={action.id} 
+                        className="p-3 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer"
+                        onClick={() => handleActionClick(action)}
+                      >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <h4 className="font-medium text-sm mb-1 line-clamp-1">{action.incident_title}</h4>
@@ -547,7 +569,10 @@ export const Dashboard: React.FC = () => {
                             {!action.assigned_to && action.status === 'Pending' && (
                               <Button
                                 size="sm"
-                                onClick={() => handleTakeAction(action.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTakeAction(action.id);
+                                }}
                                 className="h-7 px-2 text-xs bg-blue-600 hover:bg-blue-700"
                               >
                                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -562,7 +587,10 @@ export const Dashboard: React.FC = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleCompleteAction(action.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCompleteAction(action.id);
+                                  }}
                                   className="h-7 px-2 text-xs border-green-200 text-green-700 hover:bg-green-50"
                                 >
                                   <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -573,7 +601,10 @@ export const Dashboard: React.FC = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleReleaseAction(action.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleReleaseAction(action.id);
+                                  }}
                                   className="h-7 px-2 text-xs border-orange-200 text-orange-700 hover:bg-orange-50"
                                 >
                                   <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -630,6 +661,21 @@ export const Dashboard: React.FC = () => {
             setSelectedIncident(null);
           }}
           onIncidentUpdated={handleIncidentUpdated}
+        />
+
+        {/* Action Detail Modal */}
+        <ActionDetailModal
+          isOpen={isActionDetailModalOpen}
+          onClose={() => {
+            setIsActionDetailModalOpen(false);
+            setSelectedAction(null);
+          }}
+          action={selectedAction}
+          onActionUpdated={handleActionUpdated}
+          onSuccess={() => {
+            setIsActionDetailModalOpen(false);
+            setSelectedAction(null);
+          }}
         />
       </div>
     );
