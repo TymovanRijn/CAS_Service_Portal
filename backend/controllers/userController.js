@@ -4,7 +4,11 @@ const bcrypt = require('bcryptjs');
 // Get all users (admin only)
 const getUsers = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT 
         u.id, 
@@ -14,8 +18,8 @@ const getUsers = async (req, res) => {
         u.updated_at,
         r.name as role_name,
         r.description as role_description
-      FROM Users u
-      JOIN Roles r ON u.role_id = r.id
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
       ORDER BY u.created_at DESC
     `);
     client.release();
@@ -30,14 +34,18 @@ const getUsers = async (req, res) => {
 // Get all roles
 const getRoles = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT id, name, description
-      FROM Roles
+      FROM roles
       ORDER BY 
         CASE 
           WHEN name = 'Admin' THEN 1
-          WHEN name = 'SAC' THEN 2
+          WHEN name = 'Security Officer' THEN 2
           WHEN name = 'Dashboard Viewer' THEN 3
           ELSE 4
         END
@@ -75,11 +83,15 @@ const createUser = async (req, res) => {
   }
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if username already exists
     const existingUser = await client.query(
-      'SELECT id FROM Users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($2)',
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($2)',
       [username.trim(), email.trim()]
     );
     
@@ -89,7 +101,7 @@ const createUser = async (req, res) => {
     }
     
     // Check if role exists
-    const roleCheck = await client.query('SELECT id FROM Roles WHERE id = $1', [role_id]);
+    const roleCheck = await client.query('SELECT id FROM roles WHERE id = $1', [role_id]);
     if (roleCheck.rows.length === 0) {
       client.release();
       return res.status(400).json({ message: 'Ongeldige rol' });
@@ -101,7 +113,7 @@ const createUser = async (req, res) => {
     
     // Create user
     const result = await client.query(`
-      INSERT INTO Users (username, email, password_hash, role_id)
+      INSERT INTO users (username, email, password_hash, role_id)
       VALUES ($1, $2, $3, $4)
       RETURNING id, username, email, created_at
     `, [username.trim(), email.trim(), hashedPassword, role_id]);
@@ -115,8 +127,8 @@ const createUser = async (req, res) => {
         u.created_at,
         r.name as role_name,
         r.description as role_description
-      FROM Users u
-      JOIN Roles r ON u.role_id = r.id
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
     `, [result.rows[0].id]);
     
@@ -158,10 +170,14 @@ const updateUser = async (req, res) => {
   }
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if user exists
-    const existingUser = await client.query('SELECT id, username FROM Users WHERE id = $1', [id]);
+    const existingUser = await client.query('SELECT id, username FROM users WHERE id = $1', [id]);
     if (existingUser.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Gebruiker niet gevonden' });
@@ -169,7 +185,7 @@ const updateUser = async (req, res) => {
     
     // Prevent user from demoting themselves from admin
     if (req.user.userId === parseInt(id) && req.user.role === 'Admin') {
-      const roleCheck = await client.query('SELECT name FROM Roles WHERE id = $1', [role_id]);
+      const roleCheck = await client.query('SELECT name FROM roles WHERE id = $1', [role_id]);
       if (roleCheck.rows.length > 0 && roleCheck.rows[0].name !== 'Admin') {
         client.release();
         return res.status(400).json({ message: 'Je kunt je eigen admin rechten niet intrekken' });
@@ -178,7 +194,7 @@ const updateUser = async (req, res) => {
     
     // Check if new username/email already exists (excluding current user)
     const duplicateCheck = await client.query(
-      'SELECT id FROM Users WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($2)) AND id != $3',
+      'SELECT id FROM users WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($2)) AND id != $3',
       [username.trim(), email.trim(), id]
     );
     
@@ -188,7 +204,7 @@ const updateUser = async (req, res) => {
     }
     
     // Check if role exists
-    const roleCheck = await client.query('SELECT id FROM Roles WHERE id = $1', [role_id]);
+    const roleCheck = await client.query('SELECT id FROM roles WHERE id = $1', [role_id]);
     if (roleCheck.rows.length === 0) {
       client.release();
       return res.status(400).json({ message: 'Ongeldige rol' });
@@ -202,7 +218,7 @@ const updateUser = async (req, res) => {
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
       updateQuery = `
-        UPDATE Users 
+        UPDATE users 
         SET username = $1, email = $2, role_id = $3, password_hash = $4, updated_at = CURRENT_TIMESTAMP
         WHERE id = $5
         RETURNING id, username, email, updated_at
@@ -211,7 +227,7 @@ const updateUser = async (req, res) => {
     } else {
       // Update without changing password
       updateQuery = `
-        UPDATE Users 
+        UPDATE users 
         SET username = $1, email = $2, role_id = $3, updated_at = CURRENT_TIMESTAMP
         WHERE id = $4
         RETURNING id, username, email, updated_at
@@ -231,8 +247,8 @@ const updateUser = async (req, res) => {
         u.updated_at,
         r.name as role_name,
         r.description as role_description
-      FROM Users u
-      JOIN Roles r ON u.role_id = r.id
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
       WHERE u.id = $1
     `, [id]);
     
@@ -253,10 +269,14 @@ const deleteUser = async (req, res) => {
   const { id } = req.params;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if user exists
-    const existingUser = await client.query('SELECT id, username FROM Users WHERE id = $1', [id]);
+    const existingUser = await client.query('SELECT id, username FROM users WHERE id = $1', [id]);
     if (existingUser.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Gebruiker niet gevonden' });
@@ -271,8 +291,8 @@ const deleteUser = async (req, res) => {
     // Check if user has created incidents or actions
     const usageCheck = await client.query(`
       SELECT 
-        (SELECT COUNT(*) FROM Incidents WHERE created_by = $1) as incidents,
-        (SELECT COUNT(*) FROM Actions WHERE created_by = $1 OR assigned_to = $1) as actions
+        (SELECT COUNT(*) FROM incidents WHERE created_by = $1) as incidents,
+        (SELECT COUNT(*) FROM actions WHERE created_by = $1 OR assigned_to = $1) as actions
     `, [id]);
     
     const { incidents, actions } = usageCheck.rows[0];
@@ -285,7 +305,7 @@ const deleteUser = async (req, res) => {
       });
     }
     
-    await client.query('DELETE FROM Users WHERE id = $1', [id]);
+    await client.query('DELETE FROM users WHERE id = $1', [id]);
     client.release();
     
     res.json({ message: 'Gebruiker succesvol verwijderd' });
@@ -298,13 +318,17 @@ const deleteUser = async (req, res) => {
 // Get user statistics
 const getUserStats = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT 
         r.name as role_name,
         COUNT(u.id) as user_count
-      FROM Roles r
-      LEFT JOIN Users u ON r.id = u.role_id
+      FROM roles r
+      LEFT JOIN users u ON r.id = u.role_id
       GROUP BY r.id, r.name
       ORDER BY r.name
     `);

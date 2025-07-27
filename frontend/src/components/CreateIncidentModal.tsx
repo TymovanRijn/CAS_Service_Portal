@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+import { api } from '../lib/api';
 
 interface Category {
   id: number;
@@ -37,13 +36,13 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
     category_id: '',
     location_id: '',
     possible_solution: '',
-    // SAC KPI Tracking Fields
+    // Security Officer KPI Tracking Fields
     was_unregistered_incident: false,
     requires_escalation: false,
     escalation_reason: '',
     incorrect_diagnosis: false,
     incorrect_service_party: false,
-    self_resolved_by_sac: false,
+    self_resolved_by_security: false,
     self_resolution_description: '',
     estimated_downtime_minutes: '',
     actual_response_time_minutes: '',
@@ -70,13 +69,13 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
         category_id: '',
         location_id: '',
         possible_solution: '',
-        // SAC KPI Tracking Fields
+        // Security Officer KPI Tracking Fields
         was_unregistered_incident: false,
         requires_escalation: false,
         escalation_reason: '',
         incorrect_diagnosis: false,
         incorrect_service_party: false,
-        self_resolved_by_sac: false,
+        self_resolved_by_security: false,
         self_resolution_description: '',
         estimated_downtime_minutes: '',
         actual_response_time_minutes: '',
@@ -101,48 +100,14 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
   const fetchDropdownData = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      };
-
-      // Fetch categories and locations from API
-      const [categoriesRes, locationsRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/categories`, { headers, credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/locations`, { headers, credentials: 'include' })
+      // Fetch categories and locations from tenant-aware API
+      const [categoriesData, locationsData] = await Promise.all([
+        api.get('/api/categories').catch(() => ({ categories: [] })),
+        api.get('/api/locations').catch(() => ({ locations: [] }))
       ]);
 
-      if (categoriesRes.ok) {
-        const categoriesData = await categoriesRes.json();
-        setCategories(categoriesData.categories || []);
-      } else {
-        console.error('Failed to fetch categories');
-        // Fallback to hardcoded data
-        setCategories([
-          { id: 1, name: 'Technical', description: 'Technische storingen en problemen' },
-          { id: 2, name: 'Security', description: 'Beveiligingsgerelateerde incidenten' },
-          { id: 3, name: 'Maintenance', description: 'Onderhoud en reparaties' },
-          { id: 4, name: 'Operational', description: 'Operationele verstoringen' }
-        ]);
-      }
-
-      if (locationsRes.ok) {
-        const locationsData = await locationsRes.json();
-        setLocations(locationsData.locations || []);
-      } else {
-        console.error('Failed to fetch locations');
-        // Fallback to hardcoded data
-        setLocations([
-          { id: 1, name: 'Terminal 1', description: 'Hoofdterminal voor binnenlandse vluchten' },
-          { id: 2, name: 'Terminal 2', description: 'Internationale vertrekhal' },
-          { id: 3, name: 'Gate A1', description: 'Gate A1 - Security Lane 1' },
-          { id: 4, name: 'Gate A2', description: 'Gate A2 - Security Lane 2' },
-          { id: 5, name: 'Gate B1', description: 'Gate B1 - Security Lane 3' },
-          { id: 6, name: 'Central Security', description: 'Centrale beveiligingspost' },
-          { id: 7, name: 'Baggage Hall', description: 'Bagagehal' }
-        ]);
-      }
+      setCategories(categoriesData.categories || []);
+      setLocations(locationsData.locations || []);
     } catch (err) {
       console.error('Error fetching dropdown data:', err);
       setError('Fout bij het laden van categorieën en locaties');
@@ -267,13 +232,13 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
       submitData.append('location_id', formData.location_id);
       submitData.append('possible_solution', formData.possible_solution);
       
-      // Add SAC KPI tracking fields
+      // Add Security Officer KPI tracking fields
       submitData.append('was_unregistered_incident', formData.was_unregistered_incident.toString());
       submitData.append('requires_escalation', formData.requires_escalation.toString());
       submitData.append('escalation_reason', formData.escalation_reason || '');
       submitData.append('incorrect_diagnosis', formData.incorrect_diagnosis.toString());
       submitData.append('incorrect_service_party', formData.incorrect_service_party.toString());
-      submitData.append('self_resolved_by_sac', formData.self_resolved_by_sac.toString());
+      submitData.append('self_resolved_by_security', formData.self_resolved_by_security.toString());
       submitData.append('self_resolution_description', formData.self_resolution_description || '');
       submitData.append('estimated_downtime_minutes', formData.estimated_downtime_minutes.toString());
       submitData.append('actual_response_time_minutes', formData.actual_response_time_minutes.toString());
@@ -285,23 +250,16 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
         submitData.append('attachments', file);
       });
 
-      const response = await fetch(`${BACKEND_URL}/api/incidents`, {
-        method: 'POST',
+      // Use tenant-aware API for form data
+      const response = await api.post('/api/incidents', submitData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-        body: submitData
+          // Don't set Content-Type for FormData, let browser set it with boundary
+        }
       });
 
-      if (response.ok) {
-        onIncidentCreated?.();
-        onSuccess?.();
-        onClose();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Er is een fout opgetreden bij het aanmaken van het incident');
-      }
+      onIncidentCreated?.();
+      onSuccess?.();
+      onClose();
     } catch (err) {
       console.error('Error creating incident:', err);
       setError('Er is een fout opgetreden bij het aanmaken van het incident');
@@ -515,7 +473,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                           setFormData(prev => ({
                             ...prev,
                             was_unregistered_incident: false,
-                            self_resolved_by_sac: false,
+                            self_resolved_by_security: false,
                             requires_escalation: false,
                             service_party_arrived_late: false,
                             incorrect_diagnosis: false
@@ -534,7 +492,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                       >
                         <option value="">Geen bijzonderheden</option>
                         <option value="was_unregistered_incident">Niet geregistreerd incident</option>
-                        <option value="self_resolved_by_sac">Zelf opgelost door SAC</option>
+                        <option value="self_resolved_by_security">Zelf opgelost door Security Officer</option>
                         <option value="requires_escalation">Escalatie/nabellen nodig</option>
                         <option value="service_party_arrived_late">Service party te laat</option>
                         <option value="incorrect_diagnosis">Verkeerde diagnose door service party</option>
@@ -544,7 +502,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                       <div className="mt-2 text-xs text-gray-500">
                         Geselecteerd: {
                           formData.was_unregistered_incident ? 'Niet geregistreerd incident' :
-                          formData.self_resolved_by_sac ? 'Zelf opgelost door SAC' :
+                          formData.self_resolved_by_security ? 'Zelf opgelost door Security Officer' :
                           formData.requires_escalation ? 'Escalatie/nabellen nodig' :
                           formData.service_party_arrived_late ? 'Service party te laat' :
                           formData.incorrect_diagnosis ? 'Verkeerde diagnose door service party' :

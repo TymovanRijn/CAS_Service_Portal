@@ -1,19 +1,24 @@
 const { pool } = require('../config/db');
+const { getTenantConnection } = require('../middleware/tenantMiddleware');
 
-// Get today's incidents
+// Get today's incidents (tenant-aware)
 const getTodaysIncidents = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT 
         i.*,
         c.name as category_name,
         l.name as location_name,
         u.username as created_by_name
-      FROM Incidents i
-      LEFT JOIN Categories c ON i.category_id = c.id
-      LEFT JOIN Locations l ON i.location_id = l.id
-      LEFT JOIN Users u ON i.created_by = u.id
+      FROM incidents i
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN locations l ON i.location_id = l.id
+      LEFT JOIN users u ON i.created_by = u.id
       WHERE DATE(i.created_at) = CURRENT_DATE
       ORDER BY i.created_at DESC
     `);
@@ -26,20 +31,24 @@ const getTodaysIncidents = async (req, res) => {
   }
 };
 
-// Get all incidents for SAC
+// Get all incidents for Security Officers (tenant-aware)
 const getIncidents = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT 
         i.*,
         c.name as category_name,
         l.name as location_name,
         u.username as created_by_name
-      FROM Incidents i
-      LEFT JOIN Categories c ON i.category_id = c.id
-      LEFT JOIN Locations l ON i.location_id = l.id
-      LEFT JOIN Users u ON i.created_by = u.id
+      FROM incidents i
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN locations l ON i.location_id = l.id
+      LEFT JOIN users u ON i.created_by = u.id
       ORDER BY i.created_at DESC
       LIMIT 50
     `);
@@ -101,15 +110,19 @@ const getArchivedIncidents = async (req, res) => {
     
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
     
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Get total count for pagination
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM Incidents i
-      LEFT JOIN Categories c ON i.category_id = c.id
-      LEFT JOIN Locations l ON i.location_id = l.id
-      LEFT JOIN Users u ON i.created_by = u.id
+      FROM incidents i
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN locations l ON i.location_id = l.id
+      LEFT JOIN users u ON i.created_by = u.id
       ${whereClause}
     `;
     const countResult = await client.query(countQuery, queryParams);
@@ -122,10 +135,10 @@ const getArchivedIncidents = async (req, res) => {
         c.name as category_name,
         l.name as location_name,
         u.username as created_by_name
-      FROM Incidents i
-      LEFT JOIN Categories c ON i.category_id = c.id
-      LEFT JOIN Locations l ON i.location_id = l.id
-      LEFT JOIN Users u ON i.created_by = u.id
+      FROM incidents i
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN locations l ON i.location_id = l.id
+      LEFT JOIN users u ON i.created_by = u.id
       ${whereClause}
       ORDER BY i.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -155,30 +168,34 @@ const getArchivedIncidents = async (req, res) => {
 const createIncident = async (req, res) => {
   const { 
     title, description, priority, category_id, location_id, possible_solution,
-    // SAC KPI tracking fields
+    // Security Officer KPI tracking fields
     was_unregistered_incident, requires_escalation, escalation_reason,
-    incorrect_diagnosis, incorrect_service_party, self_resolved_by_sac,
+            incorrect_diagnosis, incorrect_service_party, self_resolved_by_security,
     self_resolution_description, estimated_downtime_minutes, actual_response_time_minutes,
     service_party_arrived_late, multiple_service_parties_needed
   } = req.body;
   
   let client;
   try {
-    client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    client = await getTenantConnection(req.tenant.schema);
     
     // Start transaction
     await client.query('BEGIN');
     
     // Create incident with KPI tracking fields
     const incidentResult = await client.query(`
-      INSERT INTO Incidents (
-        title, description, status, priority, possible_solution, category_id, location_id, created_by,
+      INSERT INTO incidents (
+        title, description, priority, possible_solution, category_id, location_id, created_by,
         was_unregistered_incident, requires_escalation, escalation_reason,
-        incorrect_diagnosis, incorrect_service_party, self_resolved_by_sac,
+        incorrect_diagnosis, incorrect_service_party, self_resolved_by_security,
         self_resolution_description, estimated_downtime_minutes, actual_response_time_minutes,
         service_party_arrived_late, multiple_service_parties_needed
       )
-      VALUES ($1, $2, 'Open', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *
     `, [
       title, description, priority, possible_solution, category_id, location_id, req.user.userId,
@@ -188,7 +205,7 @@ const createIncident = async (req, res) => {
       escalation_reason || null,
       incorrect_diagnosis === 'true',
       incorrect_service_party === 'true',
-      self_resolved_by_sac === 'true',
+      self_resolved_by_security === 'true',
       self_resolution_description || null,
       estimated_downtime_minutes ? parseInt(estimated_downtime_minutes) : null,
       actual_response_time_minutes ? parseInt(actual_response_time_minutes) : null,
@@ -240,10 +257,14 @@ const createIncident = async (req, res) => {
   }
 };
 
-// Get incident statistics with SAC-specific KPIs
+// Get incident statistics with SAC-specific KPIs (tenant-aware)
 const getIncidentStats = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Basic incident statistics
     const basicStatsQuery = `
@@ -251,26 +272,26 @@ const getIncidentStats = async (req, res) => {
         COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as today_incidents,
         COUNT(*) FILTER (WHERE status = 'Open') as open_incidents,
         COUNT(*) FILTER (WHERE status = 'In Progress') as in_progress_incidents,
-        COUNT(*) FILTER (WHERE status = 'Closed' AND DATE(updated_at) = CURRENT_DATE) as resolved_today,
+        COUNT(*) FILTER (WHERE status = 'Closed' AND DATE(updated_at) = CURRENT_DATE) as closed_today,
         COUNT(*) as total_incidents
-      FROM Incidents
+      FROM incidents
     `;
     const basicStats = await client.query(basicStatsQuery);
     const stats = basicStats.rows[0];
     
-    // SAC KPI 7: Niet geregistreerde incidenten - nu uit echte data
+    // Security Officer KPI 7: Niet geregistreerde incidenten - nu uit echte data
     const kpiQuery = `
       SELECT 
         COUNT(*) FILTER (WHERE was_unregistered_incident = true) as unregistered_incidents,
         COUNT(*) FILTER (WHERE requires_escalation = true) as escalation_incidents,
         COUNT(*) FILTER (WHERE incorrect_diagnosis = true) as incorrect_diagnosis_incidents,
         COUNT(*) FILTER (WHERE incorrect_service_party = true) as incorrect_service_party_incidents,
-        COUNT(*) FILTER (WHERE self_resolved_by_sac = true) as sac_resolved_incidents,
+        COUNT(*) FILTER (WHERE self_resolved_by_security = true) as security_resolved_incidents,
         COUNT(*) FILTER (WHERE service_party_arrived_late = true) as late_service_party_incidents,
         COUNT(*) FILTER (WHERE multiple_service_parties_needed = true) as multiple_service_parties_incidents,
         AVG(estimated_downtime_minutes) FILTER (WHERE estimated_downtime_minutes IS NOT NULL) as avg_estimated_downtime,
         AVG(actual_response_time_minutes) FILTER (WHERE actual_response_time_minutes IS NOT NULL) as avg_response_time
-      FROM Incidents
+      FROM incidents
     `;
     const kpiStats = await client.query(kpiQuery);
     const kpi = kpiStats.rows[0];
@@ -279,7 +300,7 @@ const getIncidentStats = async (req, res) => {
     const unregisteredIncidents = parseInt(kpi.unregistered_incidents) || 0;
     const incidentDetectionRate = totalIncidents > 0 ? ((totalIncidents - unregisteredIncidents) / totalIncidents) * 100 : 100;
     
-    // SAC KPI 8: Incidenten binnen oplostijd
+    // Security Officer KPI 8: Incidenten binnen oplostijd
     // Simuleren we SLA van 4 uur voor hoge prioriteit, 8 uur voor medium, 24 uur voor low
     const slaQuery = `
       SELECT 
@@ -300,7 +321,7 @@ const getIncidentStats = async (req, res) => {
           )
         ) as beyond_sla,
         COUNT(*) FILTER (WHERE status = 'Closed') as total_closed
-      FROM Incidents
+      FROM incidents
     `;
     const slaStats = await client.query(slaQuery);
     const sla = slaStats.rows[0];
@@ -310,7 +331,7 @@ const getIncidentStats = async (req, res) => {
     const totalClosed = parseInt(sla.total_closed) || 0;
     const slaComplianceRate = totalClosed > 0 ? (incidentsWithinSLA / totalClosed) * 100 : 100;
     
-    // SAC KPI 9: Security Lane Uptime (placeholder - zou uit operationele systemen moeten komen)
+    // Security Officer KPI 9: Security Lane Uptime (placeholder - zou uit operationele systemen moeten komen)
     // Simuleren we 24 security lanes met variabele uptime
     const totalSecurityLanes = 24;
     const currentHour = new Date().getHours();
@@ -321,12 +342,12 @@ const getIncidentStats = async (req, res) => {
     const downtimeLanes = totalSecurityLanes - operationalLanes;
     const uptimePercentage = (operationalLanes / totalSecurityLanes) * 100;
     
-    // SAC KPI 10: Escalatie/Nabellen - nu uit echte SAC data
+    // Security Officer KPI 10: Escalatie/Nabellen - nu uit echte data
     const incidentsRequiringEscalation = parseInt(kpi.escalation_incidents) || 0;
     const openIncidents = parseInt(stats.open_incidents) + parseInt(stats.in_progress_incidents);
     const escalationRate = openIncidents > 0 ? (incidentsRequiringEscalation / openIncidents) * 100 : 0;
     
-    // Service Party Performance - nu uit echte SAC data
+    // Service Party Performance - nu uit echte data
     const incorrectDiagnosis = parseInt(kpi.incorrect_diagnosis_incidents) || 0;
     const incorrectServiceParty = parseInt(kpi.incorrect_service_party_incidents) || 0;
     const lateServiceParty = parseInt(kpi.late_service_party_incidents) || 0;
@@ -345,9 +366,9 @@ const getIncidentStats = async (req, res) => {
     const criticalAssetDowntime = parseFloat(kpi.avg_estimated_downtime) || 0;
     const avgAssetRepairTime = avgServicePartyResponseTime; // Use same as response time for now
     
-    // SAC Resolution Performance
-    const sacResolvedIncidents = parseInt(kpi.sac_resolved_incidents) || 0;
-    const sacResolutionRate = totalIncidents > 0 ? (sacResolvedIncidents / totalIncidents) * 100 : 0;
+    // Security Officer Resolution Performance
+    const securityResolvedIncidents = parseInt(kpi.security_resolved_incidents) || 0;
+    const securityResolutionRate = totalIncidents > 0 ? (securityResolvedIncidents / totalIncidents) * 100 : 0;
     
     client.release();
     
@@ -356,24 +377,24 @@ const getIncidentStats = async (req, res) => {
       todayIncidents: parseInt(stats.today_incidents) || 0,
       openIncidents: parseInt(stats.open_incidents) || 0,
       inProgressIncidents: parseInt(stats.in_progress_incidents) || 0,
-      resolvedToday: parseInt(stats.resolved_today) || 0,
+      closedToday: parseInt(stats.closed_today) || 0,
       
-      // SAC KPI 7: Incident Detection
+      // Security Officer KPI 7: Incident Detection
       unregisteredIncidents,
       incidentDetectionRate: parseFloat(incidentDetectionRate.toFixed(1)),
       
-      // SAC KPI 8: SLA Compliance
+      // Security Officer KPI 8: SLA Compliance
       incidentsWithinSLA,
       incidentsBeyondSLA,
       slaComplianceRate: parseFloat(slaComplianceRate.toFixed(1)),
       
-      // SAC KPI 9: Security Lane Uptime
+      // Security Officer KPI 9: Security Lane Uptime
       totalSecurityLanes,
       operationalLanes,
       downtimeLanes,
       uptimePercentage: parseFloat(uptimePercentage.toFixed(1)),
       
-      // SAC KPI 10: Escalation
+      // Security Officer KPI 10: Escalation
       incidentsRequiringEscalation,
       escalationRate: parseFloat(escalationRate.toFixed(1)),
       
@@ -386,13 +407,13 @@ const getIncidentStats = async (req, res) => {
       criticalAssetDowntime: parseFloat(criticalAssetDowntime.toFixed(1)),
       avgAssetRepairTime: parseFloat(avgAssetRepairTime.toFixed(1)),
       
-      // Additional SAC KPI Metrics
+      // Additional Security Officer KPI Metrics
       incorrectDiagnosis,
       incorrectServiceParty,
       lateServiceParty,
       multipleServiceParties,
-      sacResolvedIncidents,
-      sacResolutionRate: parseFloat(sacResolutionRate.toFixed(1))
+      securityResolvedIncidents,
+      securityResolutionRate: parseFloat(securityResolutionRate.toFixed(1))
     });
   } catch (err) {
     console.error('Error fetching incident stats:', err);
@@ -405,7 +426,11 @@ const getIncidentAttachments = async (req, res) => {
   const { incidentId } = req.params;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT id, original_name, file_size, mime_type, uploaded_at
       FROM IncidentAttachments
@@ -426,7 +451,11 @@ const downloadAttachment = async (req, res) => {
   const { attachmentId } = req.params;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT file_path, original_name, mime_type
       FROM IncidentAttachments
@@ -469,13 +498,17 @@ const updateIncident = async (req, res) => {
   const { title, description, status, priority, category_id, location_id, possible_solution } = req.body;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if incident exists and user has permission to edit
     const checkResult = await client.query(`
-      SELECT id FROM Incidents 
+      SELECT id FROM incidents 
       WHERE id = $1 AND (created_by = $2 OR $3 = 'Admin')
-    `, [id, req.user.userId, req.user.role || 'SAC']);
+    `, [id, req.user.userId, req.user.role || 'Security Officer']);
     
     if (checkResult.rows.length === 0) {
       client.release();
@@ -484,7 +517,7 @@ const updateIncident = async (req, res) => {
     
     // Update incident
     const result = await client.query(`
-      UPDATE Incidents 
+      UPDATE incidents 
       SET title = $1, description = $2, status = $3, priority = $4, 
           category_id = $5, location_id = $6, possible_solution = $7,
           updated_at = CURRENT_TIMESTAMP

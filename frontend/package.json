@@ -1,7 +1,12 @@
 {
-  "name": "frontend",
-  "version": "0.1.0",
+  "name": "securehub-frontend",
+  "version": "1.0.0",
+  "description": "SecureHub - Professional Incident & Action Management Platform (Frontend)",
   "private": true,
+  "homepage": "https://securehub.app",
+  "keywords": ["incident-management", "action-tracking", "security", "workflow", "enterprise"],
+  "author": "SecureHub Team",
+  "license": "MIT",
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
     "@testing-library/dom": "^10.4.0",

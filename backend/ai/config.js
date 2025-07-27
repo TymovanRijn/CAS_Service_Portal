@@ -6,10 +6,10 @@ const AI_CONFIG = {
   // Ollama Configuration
   ollama: {
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'llama3.2:3b', // Updated to use the model we downloaded
-    timeout: 30000, // 30 seconds
+    model: process.env.OLLAMA_MODEL || 'qwen2.5:3b', // 🚀 Perfect balance: Smart & Fast for MacBook Air (1.9GB)
+    timeout: 45000, // 45 seconds (balanced for quality model)
     temperature: 0.7,
-    maxTokens: 1000 // Increased for better summaries
+    maxTokens: 1000 // Good balance for detailed responses
   },
   
   // OpenAI Configuration (backup option)

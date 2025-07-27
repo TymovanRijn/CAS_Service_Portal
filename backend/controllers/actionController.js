@@ -1,9 +1,14 @@
 const { pool } = require('../config/db');
+const { getTenantConnection } = require('../middleware/tenantMiddleware');
 
-// Get pending actions (not assigned or assigned to current user)
+// Get pending actions (not assigned or assigned to current user) - tenant-aware
 const getPendingActions = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT 
         a.*,
@@ -14,12 +19,12 @@ const getPendingActions = async (req, res) => {
         creator.username as created_by_name,
         c.name as category_name,
         l.name as location_name
-      FROM Actions a
-      LEFT JOIN Incidents i ON a.incident_id = i.id
-      LEFT JOIN Users assigned_user ON a.assigned_to = assigned_user.id
-      LEFT JOIN Users creator ON a.created_by = creator.id
-      LEFT JOIN Categories c ON i.category_id = c.id
-      LEFT JOIN Locations l ON i.location_id = l.id
+      FROM actions a
+      LEFT JOIN incidents i ON a.incident_id = i.id
+      LEFT JOIN users assigned_user ON a.assigned_to = assigned_user.id
+      LEFT JOIN users creator ON a.created_by = creator.id
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN locations l ON i.location_id = l.id
       WHERE a.status IN ('Pending', 'In Progress')
       AND (a.assigned_to IS NULL OR a.assigned_to = $1)
       ORDER BY 
@@ -96,13 +101,17 @@ const getActions = async (req, res) => {
     
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
     
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Get total count
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM Actions a
-      LEFT JOIN Incidents i ON a.incident_id = i.id
+      FROM actions a
+      LEFT JOIN incidents i ON a.incident_id = i.id
       ${whereClause}
     `;
     const countResult = await client.query(countQuery, queryParams);
@@ -119,12 +128,12 @@ const getActions = async (req, res) => {
         creator.username as created_by_name,
         c.name as category_name,
         l.name as location_name
-      FROM Actions a
-      LEFT JOIN Incidents i ON a.incident_id = i.id
-      LEFT JOIN Users assigned_user ON a.assigned_to = assigned_user.id
-      LEFT JOIN Users creator ON a.created_by = creator.id
-      LEFT JOIN Categories c ON i.category_id = c.id
-      LEFT JOIN Locations l ON i.location_id = l.id
+      FROM actions a
+      LEFT JOIN incidents i ON a.incident_id = i.id
+      LEFT JOIN users assigned_user ON a.assigned_to = assigned_user.id
+      LEFT JOIN users creator ON a.created_by = creator.id
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN locations l ON i.location_id = l.id
       ${whereClause}
       ORDER BY a.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -193,13 +202,17 @@ const getArchivedActions = async (req, res) => {
     
     const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
     
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Get total count
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM Actions a
-      LEFT JOIN Incidents i ON a.incident_id = i.id
+      FROM actions a
+      LEFT JOIN incidents i ON a.incident_id = i.id
       ${whereClause}
     `;
     const countResult = await client.query(countQuery, queryParams);
@@ -216,12 +229,12 @@ const getArchivedActions = async (req, res) => {
         creator.username as created_by_name,
         c.name as category_name,
         l.name as location_name
-      FROM Actions a
-      LEFT JOIN Incidents i ON a.incident_id = i.id
-      LEFT JOIN Users assigned_user ON a.assigned_to = assigned_user.id
-      LEFT JOIN Users creator ON a.created_by = creator.id
-      LEFT JOIN Categories c ON i.category_id = c.id
-      LEFT JOIN Locations l ON i.location_id = l.id
+      FROM actions a
+      LEFT JOIN incidents i ON a.incident_id = i.id
+      LEFT JOIN users assigned_user ON a.assigned_to = assigned_user.id
+      LEFT JOIN users creator ON a.created_by = creator.id
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN locations l ON i.location_id = l.id
       ${whereClause}
       ORDER BY a.updated_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -252,10 +265,14 @@ const createAction = async (req, res) => {
   const { incident_id, action_description, assigned_to } = req.body;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Verify incident exists
-    const incidentCheck = await client.query('SELECT id FROM Incidents WHERE id = $1', [incident_id]);
+    const incidentCheck = await client.query('SELECT id FROM incidents WHERE id = $1', [incident_id]);
     if (incidentCheck.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Incident not found' });
@@ -263,7 +280,7 @@ const createAction = async (req, res) => {
     
     // Create action
     const result = await client.query(`
-      INSERT INTO Actions (incident_id, action_description, status, assigned_to, created_by)
+      INSERT INTO actions (incident_id, action_description, status, assigned_to, created_by)
       VALUES ($1, $2, 'Pending', $3, $4)
       RETURNING *
     `, [incident_id, action_description, assigned_to || null, req.user.userId]);
@@ -284,12 +301,16 @@ const takeAction = async (req, res) => {
   const { id } = req.params;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if action exists and is available to take
     const actionCheck = await client.query(`
       SELECT id, assigned_to, status 
-      FROM Actions 
+      FROM actions 
       WHERE id = $1
     `, [id]);
     
@@ -312,9 +333,11 @@ const takeAction = async (req, res) => {
       return res.status(400).json({ message: 'Action is already completed' });
     }
     
+
+    
     // Assign action to current user and set status to In Progress
     const result = await client.query(`
-      UPDATE Actions 
+      UPDATE actions 
       SET assigned_to = $1, status = 'In Progress', updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
       RETURNING *
@@ -336,12 +359,16 @@ const releaseAction = async (req, res) => {
   const { id } = req.params;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if action exists and user has permission to release it
     const actionCheck = await client.query(`
       SELECT id, assigned_to, status, created_by
-      FROM Actions 
+      FROM actions 
       WHERE id = $1
     `, [id]);
     
@@ -367,9 +394,11 @@ const releaseAction = async (req, res) => {
       return res.status(400).json({ message: 'Cannot release a completed action' });
     }
     
+
+    
     // Release action (unassign and set back to Pending)
     const result = await client.query(`
-      UPDATE Actions 
+      UPDATE actions 
       SET assigned_to = NULL, status = 'Pending', updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
@@ -392,12 +421,16 @@ const updateAction = async (req, res) => {
   const { action_description, status, notes } = req.body;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if action exists and user has permission
     const actionCheck = await client.query(`
       SELECT id, assigned_to, created_by, status as current_status
-      FROM Actions 
+      FROM actions 
       WHERE id = $1
     `, [id]);
     
@@ -456,7 +489,7 @@ const updateAction = async (req, res) => {
     updateFields.push('updated_at = CURRENT_TIMESTAMP');
     
     const updateQuery = `
-      UPDATE Actions 
+      UPDATE actions 
       SET ${updateFields.join(', ')}
       WHERE id = $${paramIndex}
       RETURNING *
@@ -482,12 +515,16 @@ const updateActionStatus = async (req, res) => {
   const { status, notes } = req.body;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if action exists and user has permission
     const actionCheck = await client.query(`
       SELECT id, assigned_to, created_by, status as current_status
-      FROM Actions 
+      FROM actions 
       WHERE id = $1
     `, [id]);
     
@@ -518,7 +555,7 @@ const updateActionStatus = async (req, res) => {
     
     // Update action
     let updateQuery = `
-      UPDATE Actions 
+      UPDATE actions 
       SET status = $1, updated_at = CURRENT_TIMESTAMP
     `;
     let queryParams = [status];
@@ -546,33 +583,39 @@ const updateActionStatus = async (req, res) => {
   }
 };
 
-// Get action statistics
+// Get action statistics (tenant-aware)
 const getActionStats = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Get various statistics
     const pendingStats = await client.query(`
-      SELECT COUNT(*) as count FROM Actions 
+      SELECT COUNT(*) as count FROM actions 
       WHERE status = 'Pending'
     `);
     
     const inProgressStats = await client.query(`
-      SELECT COUNT(*) as count FROM Actions 
+      SELECT COUNT(*) as count FROM actions 
       WHERE status = 'In Progress'
     `);
     
-    const completedTodayStats = await client.query(`
-      SELECT COUNT(*) as count FROM Actions 
-      WHERE status = 'Completed' AND DATE(updated_at) = CURRENT_DATE
-    `);
+
     
     const myActionsStats = await client.query(`
-      SELECT COUNT(*) as count FROM Actions 
+      SELECT COUNT(*) as count FROM actions 
       WHERE assigned_to = $1 AND status IN ('Pending', 'In Progress')
     `, [req.user.userId]);
     
     client.release();
+    
+    const completedTodayStats = await client.query(`
+      SELECT COUNT(*) as count FROM actions 
+      WHERE status = 'Completed' AND DATE(updated_at) = CURRENT_DATE
+    `);
     
     res.json({
       pendingActions: parseInt(pendingStats.rows[0].count),
@@ -586,15 +629,19 @@ const getActionStats = async (req, res) => {
   }
 };
 
-// Get available users for assignment
+// Get available users for assignment (tenant-aware)
 const getAvailableUsers = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT u.id, u.username, u.email, r.name as role_name
-      FROM Users u
-      JOIN Roles r ON u.role_id = r.id
-      WHERE r.name IN ('SAC', 'Admin')
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE r.name IN ('Security Officer', 'Tenant Admin', 'SAC')
       ORDER BY u.username ASC
     `);
     

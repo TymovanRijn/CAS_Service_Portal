@@ -1,0 +1,17 @@
+
+> securehub-backend@1.0.0 start
+> node index.js
+
+🤖 Initializing background AI insights generation...
+✅ Background AI generation scheduled every 5 hours
+🚀 Server running on port 3001
+📍 Environment: development
+🌐 Host: 0.0.0.0
+🔗 Local access: http://localhost:3001
+🔗 Network access: http://10.41.68.202:3001
+Database connected
+🚀 Generating initial AI insights...
+🤖 Starting background AI insights generation...
+🤖 AI insights temporarily disabled during tenant migration
+✅ Background AI insights generated successfully in 1ms
+📊 Generated 0 AI insights

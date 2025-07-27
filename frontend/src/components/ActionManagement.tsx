@@ -274,6 +274,8 @@ export const ActionManagement: React.FC = () => {
     }
   };
 
+
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -749,6 +751,7 @@ export const ActionManagement: React.FC = () => {
                           )}
                         </>
                       )}
+
                     </div>
                     
                     {/* Mobile-optimized Metadata */}

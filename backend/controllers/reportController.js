@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { getTenantConnection } = require('../middleware/tenantMiddleware');
 const puppeteer = require('puppeteer');
 
 // Generate daily report for a specific date
@@ -10,7 +11,11 @@ const generateDailyReport = async (req, res) => {
   }
 
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Validate date format
     const reportDate = new Date(date);
@@ -583,16 +588,20 @@ const generateReportHTML = ({ date, incidents, actions, stats, categoryBreakdown
 // Get available report dates (dates with incidents or actions)
 const getAvailableReportDates = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     const query = `
       SELECT DISTINCT DATE(created_at) as report_date
       FROM (
-        SELECT created_at FROM Incidents
+        SELECT created_at FROM incidents
         UNION
-        SELECT created_at FROM Actions
+        SELECT created_at FROM actions
         UNION
-        SELECT updated_at as created_at FROM Actions WHERE updated_at != created_at
+        SELECT updated_at as created_at FROM actions WHERE updated_at != created_at
       ) combined_dates
       ORDER BY report_date DESC
       LIMIT 30

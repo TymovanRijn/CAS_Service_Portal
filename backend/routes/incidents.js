@@ -9,36 +9,36 @@ const {
   getIncidentAttachments,
   downloadAttachment
 } = require('../controllers/incidentController');
-const { authMiddleware, requireSAC, requireDashboardAccess } = require('../middleware/authMiddleware');
 const { uploadIncidentAttachments } = require('../middleware/uploadMiddleware');
+const { tenantAuthAndValidationMiddleware, requireTenantPermission } = require('../middleware/tenantMiddleware');
 
 const router = express.Router();
 
-// All incident routes require authentication
-router.use(authMiddleware);
+// All incident routes require tenant authentication and validation
+router.use(tenantAuthAndValidationMiddleware);
 
 // Get incident statistics - Dashboard Viewers need access for KPI Dashboard
-router.get('/stats', requireDashboardAccess, getIncidentStats);
+router.get('/stats', requireTenantPermission(['all', 'dashboard:read', 'incidents:read']), getIncidentStats);
 
 // Get today's incidents
-router.get('/today', requireSAC, getTodaysIncidents);
+router.get('/today', requireTenantPermission(['all', 'incidents:read', 'incidents']), getTodaysIncidents);
 
 // Get all incidents
-router.get('/', requireSAC, getIncidents);
+router.get('/', requireTenantPermission(['all', 'incidents:read', 'incidents']), getIncidents);
 
 // Get archived incidents with filtering and pagination - Dashboard Viewers need access for KPI Dashboard
-router.get('/archive', requireDashboardAccess, getArchivedIncidents);
+router.get('/archive', requireTenantPermission(['all', 'dashboard:read', 'incidents:read']), getArchivedIncidents);
 
 // Create new incident (with file upload support)
-router.post('/', requireSAC, uploadIncidentAttachments, createIncident);
+router.post('/', requireTenantPermission(['all', 'incidents:create', 'incidents']), uploadIncidentAttachments, createIncident);
 
 // Update incident
-router.put('/:id', requireSAC, updateIncident);
+router.put('/:id', requireTenantPermission(['all', 'incidents:update', 'incidents']), updateIncident);
 
 // Get incident attachments
-router.get('/:incidentId/attachments', requireSAC, getIncidentAttachments);
+router.get('/:incidentId/attachments', requireTenantPermission(['all', 'incidents:read', 'incidents']), getIncidentAttachments);
 
 // Download attachment
-router.get('/attachments/:attachmentId', requireSAC, downloadAttachment);
+router.get('/attachments/:attachmentId', requireTenantPermission(['all', 'incidents:read', 'incidents']), downloadAttachment);
 
 module.exports = router; 

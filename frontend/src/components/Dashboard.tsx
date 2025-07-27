@@ -6,8 +6,7 @@ import { CreateIncidentModal } from './CreateIncidentModal';
 import { CreateActionModal } from './CreateActionModal';
 import { IncidentDetailModal } from './IncidentDetailModal';
 import { ActionDetailModal } from './ActionDetailModal';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+import { api } from '../lib/api';
 
 interface Incident {
   id: number;
@@ -46,19 +45,7 @@ interface Action {
   incident_status?: string;
 }
 
-interface IncidentStats {
-  todayIncidents: number;
-  openIncidents: number;
-  inProgressIncidents: number;
-  resolvedToday: number;
-}
 
-interface ActionStats {
-  pendingActions: number;
-  inProgressActions: number;
-  completedToday: number;
-  myActions: number;
-}
 
 interface User {
   id: number;
@@ -71,18 +58,6 @@ export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [todaysIncidents, setTodaysIncidents] = useState<Incident[]>([]);
   const [pendingActions, setPendingActions] = useState<Action[]>([]);
-  const [stats, setStats] = useState<IncidentStats>({
-    todayIncidents: 0,
-    openIncidents: 0,
-    inProgressIncidents: 0,
-    resolvedToday: 0
-  });
-  const [actionStats, setActionStats] = useState<ActionStats>({
-    pendingActions: 0,
-    inProgressActions: 0,
-    completedToday: 0,
-    myActions: 0
-  });
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateIncidentModalOpen, setIsCreateIncidentModalOpen] = useState(false);
@@ -93,11 +68,19 @@ export const Dashboard: React.FC = () => {
   const [isActionDetailModalOpen, setIsActionDetailModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only fetch data for SAC users
+  // Check if user has dashboard permissions
+  const hasPermission = (requiredPermissions: string[]) => {
+    if (!user?.permissions) return false;
+    return requiredPermissions.some(permission => 
+      user.permissions!.includes(permission) || user.permissions!.includes('all')
+    );
+  };
+
+  // Fetch data for users with dashboard permissions
   useEffect(() => {
     if (!user) return;
     
-    if (user.role_name === 'SAC' || user.role_name === 'Admin') {
+    if (hasPermission(['dashboard:read', 'incidents:read', 'actions:read'])) {
       fetchDashboardData();
     } else {
       setIsLoading(false);
@@ -111,45 +94,17 @@ export const Dashboard: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      };
-
-      // Fetch data in parallel
-      const [incidentsRes, actionsRes, statsRes, actionStatsRes, usersRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/incidents/today`, { headers, credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/actions/pending`, { headers, credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/incidents/stats`, { headers, credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/actions/stats`, { headers, credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/actions/users`, { headers, credentials: 'include' })
+      // Fetch data in parallel using tenant-aware API
+      const [incidentsData, actionsData, usersData] = await Promise.all([
+        api.get('/api/incidents/today').catch(() => ({ incidents: [] })),
+        api.get('/api/actions/pending').catch(() => ({ actions: [] })),
+        api.get('/api/actions/users').catch(() => ({ users: [] }))
       ]);
 
-      if (incidentsRes.ok) {
-        const incidentsData = await incidentsRes.json();
-        setTodaysIncidents(incidentsData.incidents || []);
-      }
-
-      if (actionsRes.ok) {
-        const actionsData = await actionsRes.json();
-        setPendingActions(actionsData.actions || []);
-      }
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
-
-      if (actionStatsRes.ok) {
-        const actionStatsData = await actionStatsRes.json();
-        setActionStats(actionStatsData);
-      }
-
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        setAvailableUsers(usersData.users || []);
-      }
+      // Set the fetched data
+      setTodaysIncidents(incidentsData.incidents || []);
+      setPendingActions(actionsData.actions || []);
+      setAvailableUsers(usersData.users || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setError('Er is een fout opgetreden bij het laden van de dashboard gegevens.');
@@ -171,19 +126,8 @@ export const Dashboard: React.FC = () => {
 
   const handleTakeAction = async (actionId: number) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${BACKEND_URL}/api/actions/${actionId}/take`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        fetchDashboardData(); // Refresh data
-      }
+      await api.put(`/api/actions/${actionId}/take`);
+      fetchDashboardData(); // Refresh data
     } catch (err) {
       console.error('Error taking action:', err);
     }
@@ -191,20 +135,8 @@ export const Dashboard: React.FC = () => {
 
   const handleCompleteAction = async (actionId: number) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${BACKEND_URL}/api/actions/${actionId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'Completed' })
-      });
-
-      if (response.ok) {
-        fetchDashboardData(); // Refresh data
-      }
+      await api.put(`/api/actions/${actionId}/status`, { status: 'Completed' });
+      fetchDashboardData(); // Refresh data
     } catch (err) {
       console.error('Error completing action:', err);
     }
@@ -212,23 +144,14 @@ export const Dashboard: React.FC = () => {
 
   const handleReleaseAction = async (actionId: number) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${BACKEND_URL}/api/actions/${actionId}/release`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        fetchDashboardData(); // Refresh data
-      }
+      await api.put(`/api/actions/${actionId}/release`);
+      fetchDashboardData(); // Refresh data
     } catch (err) {
       console.error('Error releasing action:', err);
     }
   };
+
+
 
   const handleIncidentClick = (incident: Incident) => {
     setSelectedIncident(incident);
@@ -262,7 +185,7 @@ export const Dashboard: React.FC = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         );
-      case 'SAC':
+      case 'Security Officer':
         return (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -353,93 +276,29 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  // SAC Dashboard - Show operational data
-  if (user.role_name === 'SAC' || user.role_name === 'Admin') {
+      // Permission-based Dashboard - Show operational data for users with dashboard access
+    if (hasPermission(['dashboard:read', 'incidents:read', 'actions:read'])) {
     return (
       <div className="space-y-6">
           {/* Welcome Section */}
           <div className="mb-6">
             <div className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
-                {getRoleIcon(user.role_name)}
+                {getRoleIcon(user.role_name || 'User')}
               </div>
               <div>
                 <h2 className="text-xl font-bold">Welkom terug, {user.username}!</h2>
-                <p className="text-muted-foreground">{user.role_description}</p>
+                <p className="text-muted-foreground">{user.role_description || user.role_name}</p>
               </div>
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Vandaag Gemeld</p>
-                    <p className="text-2xl font-bold text-blue-600">{stats.todayIncidents}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Open Incidenten</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.openIncidents}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">In Behandeling</p>
-                    <p className="text-2xl font-bold text-orange-600">{stats.inProgressIncidents}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Vandaag Opgelost</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.resolvedToday}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Today's Incidents */}
+            {hasPermission(['incidents:read']) && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -447,12 +306,14 @@ export const Dashboard: React.FC = () => {
                     <CardTitle className="text-lg">Incidenten van Vandaag</CardTitle>
                     <CardDescription>Alle incidenten die vandaag zijn gemeld</CardDescription>
                   </div>
+                  {hasPermission(['incidents:create']) && (
                   <Button size="sm" onClick={() => setIsCreateIncidentModalOpen(true)}>
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Nieuw Incident
                   </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -514,8 +375,10 @@ export const Dashboard: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Right Column - Pending Actions */}
+            {hasPermission(['actions:read']) && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -523,12 +386,14 @@ export const Dashboard: React.FC = () => {
                     <CardTitle className="text-lg">Openstaande Acties</CardTitle>
                     <CardDescription>Acties die nog uitgevoerd moeten worden</CardDescription>
                   </div>
+                  {hasPermission(['actions:create']) && (
                   <Button variant="outline" size="sm" onClick={() => setIsCreateActionModalOpen(true)}>
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Nieuwe Actie
                   </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -636,6 +501,7 @@ export const Dashboard: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+            )}
           </div>
         {/* Create Incident Modal */}
         <CreateIncidentModal
@@ -682,7 +548,7 @@ export const Dashboard: React.FC = () => {
   }
 
   // Other roles - Simple action-based interface
-  const actions = getRoleActions(user.role_name);
+  const actions = getRoleActions(user.role_name || 'Dashboard Viewer');
 
   return (
     <div className="space-y-6">
@@ -690,7 +556,7 @@ export const Dashboard: React.FC = () => {
       <div>
         <div className="flex items-center space-x-3 mb-2">
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
-            {getRoleIcon(user.role_name)}
+            {getRoleIcon(user.role_name || 'Dashboard Viewer')}
           </div>
           <div>
             <h2 className="text-2xl font-bold">Welkom terug, {user.username}!</h2>
@@ -736,44 +602,7 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Stats for non-SAC users */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Snel Overzicht</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{stats.openIncidents}</p>
-                <p className="text-sm text-muted-foreground">Open Incidenten</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{stats.resolvedToday}</p>
-                <p className="text-sm text-muted-foreground">Vandaag Opgelost</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-orange-600">{stats.inProgressIncidents}</p>
-                <p className="text-sm text-muted-foreground">In Behandeling</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">{actionStats.completedToday}</p>
-                <p className="text-sm text-muted-foreground">Acties Voltooid</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+
     </div>
   );
 }; 

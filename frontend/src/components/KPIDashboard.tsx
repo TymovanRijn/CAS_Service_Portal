@@ -24,10 +24,10 @@ interface KPIMetrics {
   completedActions: number;
   inProgressActions: number;
   
-  // SAC KPI data (only what SACs actually input)
+  // Security Officer KPI data (only what Security Officers actually input)
   unregisteredIncidents: number;
   incidentsRequiringEscalation: number;
-  sacResolvedIncidents: number;
+  securityResolvedIncidents: number;
   incorrectDiagnosis: number;
   incorrectServiceParty: number;
   lateServiceParty: number;
@@ -101,7 +101,7 @@ export const KPIDashboard: React.FC = () => {
         inProgressActions: 0,
         unregisteredIncidents: 0,
         incidentsRequiringEscalation: 0,
-        sacResolvedIncidents: 0,
+        securityResolvedIncidents: 0,
         incorrectDiagnosis: 0,
         incorrectServiceParty: 0,
         lateServiceParty: 0,
@@ -115,10 +115,10 @@ export const KPIDashboard: React.FC = () => {
         calculatedMetrics.openIncidents = incidentStats.openIncidents || 0;
         calculatedMetrics.inProgressIncidents = incidentStats.inProgressIncidents || 0;
         
-        // SAC KPI data (always show, even if 0)
+        // Security Officer KPI data (always show, even if 0)
         calculatedMetrics.unregisteredIncidents = incidentStats.unregisteredIncidents || 0;
         calculatedMetrics.incidentsRequiringEscalation = incidentStats.incidentsRequiringEscalation || 0;
-        calculatedMetrics.sacResolvedIncidents = incidentStats.sacResolvedIncidents || 0;
+        calculatedMetrics.securityResolvedIncidents = incidentStats.securityResolvedIncidents || 0;
         calculatedMetrics.incorrectDiagnosis = incidentStats.incorrectDiagnosis || 0;
         calculatedMetrics.incorrectServiceParty = incidentStats.incorrectServiceParty || 0;
         calculatedMetrics.lateServiceParty = incidentStats.lateServiceParty || 0;
@@ -424,10 +424,10 @@ export const KPIDashboard: React.FC = () => {
       {/* SAC KPI Section - Always show */}
       <Card>
         <CardHeader>
-          <CardTitle>👁️ SAC Kwaliteitsindicatoren</CardTitle>
+                      <CardTitle>👁️ Security Officer Kwaliteitsindicatoren</CardTitle>
           <CardDescription>
-            KPI's opgegeven door SAC's bij incident aanmaak - {getPeriodLabel().toLowerCase()}
-            {metrics && (metrics.unregisteredIncidents + metrics.incidentsRequiringEscalation + metrics.sacResolvedIncidents + 
+                          KPI's opgegeven door Security Officers bij incident aanmaak - {getPeriodLabel().toLowerCase()}
+            {metrics && (metrics.unregisteredIncidents + metrics.incidentsRequiringEscalation + metrics.securityResolvedIncidents + 
               metrics.incorrectDiagnosis + metrics.incorrectServiceParty + metrics.lateServiceParty + metrics.multipleServiceParties) === 0 && 
               " (nog geen bijzonderheden gemarkeerd)"}
           </CardDescription>
@@ -449,8 +449,8 @@ export const KPIDashboard: React.FC = () => {
               </div>
             </div>
             <div className="text-center p-4 border rounded-lg bg-green-50 border-green-200">
-              <div className="text-2xl font-bold text-green-600">{formatNumber(metrics?.sacResolvedIncidents || 0)}</div>
-              <div className="text-sm text-green-700">Door SAC Opgelost</div>
+                              <div className="text-2xl font-bold text-green-600">{formatNumber(metrics?.securityResolvedIncidents || 0)}</div>
+                              <div className="text-sm text-green-700">Door Security Officer Opgelost</div>
               <div className="text-xs text-green-600 mt-1">
                 Zelfstandig afgehandeld
               </div>
@@ -464,7 +464,7 @@ export const KPIDashboard: React.FC = () => {
             </div>
           </div>
           
-          {/* Second row for additional SAC KPIs */}
+                        {/* Second row for additional Security Officer KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="text-center p-4 border rounded-lg bg-red-50 border-red-200">
               <div className="text-2xl font-bold text-red-600">{formatNumber(metrics?.incorrectDiagnosis || 0)}</div>

@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
+import { api } from '../lib/api';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -22,7 +23,9 @@ export const Reports: React.FC = () => {
   const [error, setError] = useState('');
 
   // Check if user has permission to view reports
-  const hasReportAccess = user?.role_name === 'Admin' || user?.role_name === 'Dashboard Viewer';
+  const hasReportAccess = user?.permissions?.includes('all') || 
+                          user?.permissions?.includes('reports') || 
+                          user?.permissions?.includes('reports:read');
 
   useEffect(() => {
     if (hasReportAccess) {
@@ -34,22 +37,8 @@ export const Reports: React.FC = () => {
 
   const fetchAvailableDates = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${BACKEND_URL}/api/reports/dates`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableDates(data.dates || []);
-      } else {
-        console.error('Failed to fetch available dates');
-        setError('Fout bij het ophalen van beschikbare datums');
-      }
+      const data = await api.get('/api/reports/dates');
+      setAvailableDates(data.dates || []);
     } catch (err) {
       console.error('Error fetching available dates:', err);
       setError('Netwerkfout bij het ophalen van datums');

@@ -1,14 +1,19 @@
 const { pool } = require('../config/db');
+const { getTenantConnection } = require('../middleware/tenantMiddleware');
 
-// Get all categories
+// Get all categories (tenant-aware)
 const getCategories = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT id, name, description, created_at
-      FROM Categories
+      FROM categories
       ORDER BY 
-        CASE WHEN name = 'Overig' THEN 0 ELSE 1 END,
+        CASE WHEN name = 'Other' THEN 0 ELSE 1 END,
         name ASC
     `);
     client.release();
@@ -20,16 +25,18 @@ const getCategories = async (req, res) => {
   }
 };
 
-// Get all locations
+// Get all locations (tenant-aware)
 const getLocations = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
     const result = await client.query(`
       SELECT id, name, description, created_at
-      FROM Locations
-      ORDER BY 
-        CASE WHEN name = 'Overig' THEN 0 ELSE 1 END,
-        name ASC
+      FROM locations
+      ORDER BY name ASC
     `);
     client.release();
     
@@ -49,11 +56,15 @@ const createCategory = async (req, res) => {
   }
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if category already exists
     const existingCategory = await client.query(
-      'SELECT id FROM Categories WHERE LOWER(name) = LOWER($1)',
+      'SELECT id FROM categories WHERE LOWER(name) = LOWER($1)',
       [name.trim()]
     );
     
@@ -63,7 +74,7 @@ const createCategory = async (req, res) => {
     }
     
     const result = await client.query(`
-      INSERT INTO Categories (name, description)
+      INSERT INTO categories (name, description)
       VALUES ($1, $2)
       RETURNING id, name, description, created_at
     `, [name.trim(), description?.trim() || null]);
@@ -90,10 +101,14 @@ const updateCategory = async (req, res) => {
   }
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if category exists
-    const existingCategory = await client.query('SELECT id, name FROM Categories WHERE id = $1', [id]);
+    const existingCategory = await client.query('SELECT id, name FROM categories WHERE id = $1', [id]);
     if (existingCategory.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Categorie niet gevonden' });
@@ -107,7 +122,7 @@ const updateCategory = async (req, res) => {
     
     // Check if new name already exists (excluding current category)
     const duplicateCheck = await client.query(
-      'SELECT id FROM Categories WHERE LOWER(name) = LOWER($1) AND id != $2',
+      'SELECT id FROM categories WHERE LOWER(name) = LOWER($1) AND id != $2',
       [name.trim(), id]
     );
     
@@ -117,7 +132,7 @@ const updateCategory = async (req, res) => {
     }
     
     const result = await client.query(`
-      UPDATE Categories 
+      UPDATE categories 
       SET name = $1, description = $2
       WHERE id = $3
       RETURNING id, name, description, created_at
@@ -140,10 +155,14 @@ const deleteCategory = async (req, res) => {
   const { id } = req.params;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if category exists
-    const existingCategory = await client.query('SELECT id, name FROM Categories WHERE id = $1', [id]);
+    const existingCategory = await client.query('SELECT id, name FROM categories WHERE id = $1', [id]);
     if (existingCategory.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Categorie niet gevonden' });
@@ -156,7 +175,7 @@ const deleteCategory = async (req, res) => {
     }
     
     // Check if category is in use
-    const usageCheck = await client.query('SELECT COUNT(*) as count FROM Incidents WHERE category_id = $1', [id]);
+    const usageCheck = await client.query('SELECT COUNT(*) as count FROM incidents WHERE category_id = $1', [id]);
     const incidentCount = parseInt(usageCheck.rows[0].count);
     
     if (incidentCount > 0) {
@@ -166,7 +185,7 @@ const deleteCategory = async (req, res) => {
       });
     }
     
-    await client.query('DELETE FROM Categories WHERE id = $1', [id]);
+    await client.query('DELETE FROM categories WHERE id = $1', [id]);
     client.release();
     
     res.json({ message: 'Categorie succesvol verwijderd' });
@@ -185,11 +204,15 @@ const createLocation = async (req, res) => {
   }
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if location already exists
     const existingLocation = await client.query(
-      'SELECT id FROM Locations WHERE LOWER(name) = LOWER($1)',
+      'SELECT id FROM locations WHERE LOWER(name) = LOWER($1)',
       [name.trim()]
     );
     
@@ -199,7 +222,7 @@ const createLocation = async (req, res) => {
     }
     
     const result = await client.query(`
-      INSERT INTO Locations (name, description)
+      INSERT INTO locations (name, description)
       VALUES ($1, $2)
       RETURNING id, name, description, created_at
     `, [name.trim(), description?.trim() || null]);
@@ -226,10 +249,14 @@ const updateLocation = async (req, res) => {
   }
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if location exists
-    const existingLocation = await client.query('SELECT id, name FROM Locations WHERE id = $1', [id]);
+    const existingLocation = await client.query('SELECT id, name FROM locations WHERE id = $1', [id]);
     if (existingLocation.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Locatie niet gevonden' });
@@ -243,7 +270,7 @@ const updateLocation = async (req, res) => {
     
     // Check if new name already exists (excluding current location)
     const duplicateCheck = await client.query(
-      'SELECT id FROM Locations WHERE LOWER(name) = LOWER($1) AND id != $2',
+      'SELECT id FROM locations WHERE LOWER(name) = LOWER($1) AND id != $2',
       [name.trim(), id]
     );
     
@@ -253,7 +280,7 @@ const updateLocation = async (req, res) => {
     }
     
     const result = await client.query(`
-      UPDATE Locations 
+      UPDATE locations 
       SET name = $1, description = $2
       WHERE id = $3
       RETURNING id, name, description, created_at
@@ -276,10 +303,14 @@ const deleteLocation = async (req, res) => {
   const { id } = req.params;
   
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Check if location exists
-    const existingLocation = await client.query('SELECT id, name FROM Locations WHERE id = $1', [id]);
+    const existingLocation = await client.query('SELECT id, name FROM locations WHERE id = $1', [id]);
     if (existingLocation.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Locatie niet gevonden' });
@@ -292,7 +323,7 @@ const deleteLocation = async (req, res) => {
     }
     
     // Check if location is in use
-    const usageCheck = await client.query('SELECT COUNT(*) as count FROM Incidents WHERE location_id = $1', [id]);
+    const usageCheck = await client.query('SELECT COUNT(*) as count FROM incidents WHERE location_id = $1', [id]);
     const incidentCount = parseInt(usageCheck.rows[0].count);
     
     if (incidentCount > 0) {
@@ -302,7 +333,7 @@ const deleteLocation = async (req, res) => {
       });
     }
     
-    await client.query('DELETE FROM Locations WHERE id = $1', [id]);
+    await client.query('DELETE FROM locations WHERE id = $1', [id]);
     client.release();
     
     res.json({ message: 'Locatie succesvol verwijderd' });
@@ -315,18 +346,22 @@ const deleteLocation = async (req, res) => {
 // Ensure "Overig" categories and locations exist
 const ensureDefaultEntries = async (req, res) => {
   try {
-    const client = await pool.connect();
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+    
+    const client = await getTenantConnection(req.tenant.schema);
     
     // Ensure "Overig" category exists
     await client.query(`
-      INSERT INTO Categories (name, description)
+      INSERT INTO categories (name, description)
       VALUES ('Overig', 'Algemene categorie voor incidenten die niet in andere categorieën passen')
       ON CONFLICT (name) DO NOTHING
     `);
     
     // Ensure "Overig" location exists
     await client.query(`
-      INSERT INTO Locations (name, description)
+      INSERT INTO locations (name, description)
       VALUES ('Overig', 'Algemene locatie voor incidenten zonder specifieke locatie')
       ON CONFLICT (name) DO NOTHING
     `);
@@ -340,6 +375,46 @@ const ensureDefaultEntries = async (req, res) => {
   }
 };
 
+// Get category statistics (tenant-aware)
+const getCategoryStats = async (req, res) => {
+  try {
+    if (!req.tenant) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
+
+    const client = await getTenantConnection(req.tenant.schema);
+    
+    // Get category usage statistics
+    const categoryStats = await client.query(`
+      SELECT 
+        c.id,
+        c.name,
+        c.description,
+        c.color,
+        COUNT(i.id) as incident_count,
+        COUNT(CASE WHEN i.status = 'Open' THEN 1 END) as open_incidents,
+        COUNT(CASE WHEN i.status = 'Closed' THEN 1 END) as closed_incidents
+      FROM categories c
+      LEFT JOIN incidents i ON c.id = i.category_id
+      GROUP BY c.id, c.name, c.description, c.color
+      ORDER BY incident_count DESC, c.name ASC
+    `);
+    
+    client.release();
+    
+    res.json({ 
+      success: true,
+      data: categoryStats.rows 
+    });
+  } catch (err) {
+    console.error('Error fetching category statistics:', err);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching category statistics' 
+    });
+  }
+};
+
 module.exports = {
   getCategories,
   getLocations,
@@ -349,5 +424,6 @@ module.exports = {
   createLocation,
   updateLocation,
   deleteLocation,
-  ensureDefaultEntries
+  ensureDefaultEntries,
+  getCategoryStats
 }; 

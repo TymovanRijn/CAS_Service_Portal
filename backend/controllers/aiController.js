@@ -370,10 +370,10 @@ const getAIInsightsCacheStatus = async (req, res) => {
   });
 };
 
-// Generate REAL AI-powered insights
+// Generate REAL AI-powered insights (temporarily disabled for tenant migration)
 const generateRealAIInsights = async () => {
-  const { pool } = require('../config/db');
-  const client = await pool.connect();
+  console.log('🤖 AI insights temporarily disabled during tenant migration');
+  return [];
   
   try {
     console.log('🤖 Generating REAL AI insights with Ollama...');
@@ -649,10 +649,10 @@ const parseAIInsights = (aiText, dataContext) => {
   return uniqueInsights.slice(0, 5); // Limit to 5 insights
 };
 
-// Generate real-time insights for dashboard (FALLBACK - rule-based)
+// Generate real-time insights for dashboard (temporarily disabled for tenant migration)
 const generateRealTimeInsights = async () => {
-  const { pool } = require('../config/db');
-  const client = await pool.connect();
+  console.log('🤖 Real-time insights temporarily disabled during tenant migration');
+  return [];
   
   try {
     // Get recent incidents (last 7 days)

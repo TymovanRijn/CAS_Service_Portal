@@ -228,6 +228,8 @@ export const ActionDetailModal: React.FC<ActionDetailModalProps> = ({
     }
   };
 
+
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Pending':

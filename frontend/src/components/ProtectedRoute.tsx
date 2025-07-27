@@ -38,7 +38,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check role-based access
   if (allowedRoles.length > 0 && user) {
-    if (!allowedRoles.includes(user.role_name)) {
+    if (!user.role_name || !allowedRoles.includes(user.role_name)) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <div className="text-center max-w-md">

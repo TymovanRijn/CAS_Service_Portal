@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { api } from '../lib/api';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -120,34 +121,18 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
     }
 
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${BACKEND_URL}/api/actions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          incident_id: parseInt(formData.incident_id),
-          action_description: formData.action_description,
-          assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : null
-        }),
+      await api.post('/api/actions', {
+        incident_id: parseInt(formData.incident_id),
+        action_description: formData.action_description,
+        assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : null
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Action created:', data);
-        onSuccess();
-        onClose();
-      } else {
-        const data = await response.json();
-        setError(data.message || 'Fout bij het aanmaken van actie');
-      }
-    } catch (err) {
+      console.log('Action created successfully');
+      onSuccess();
+      onClose();
+    } catch (err: any) {
       console.error('Error creating action:', err);
-      setError('Netwerkfout. Probeer het opnieuw.');
+      setError(err.response?.data?.message || err.message || 'Netwerkfout. Probeer het opnieuw.');
     } finally {
       setIsSubmitting(false);
     }
@@ -316,7 +301,7 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
                     ))}
                   </select>
                   <p className="text-xs text-gray-500">
-                    Als je geen persoon selecteert, kan elke SAC de actie oppakken
+                    Als je geen persoon selecteert, kan elke Security Officer de actie oppakken
                   </p>
                 </div>
 

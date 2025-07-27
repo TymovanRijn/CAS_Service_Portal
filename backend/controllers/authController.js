@@ -5,7 +5,7 @@ const { pool } = require('../config/db');
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
 const registerUser = async (req, res) => {
-  const { username, email, password, role_id = 1 } = req.body; // Default to role_id 1 (SAC)
+      const { username, email, password, role_id = 1 } = req.body; // Default to role_id 1 (Security Officer)
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);

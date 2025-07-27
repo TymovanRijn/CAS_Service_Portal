@@ -1,17 +1,16 @@
 const express = require('express');
 const { generateDailyReport, getAvailableReportDates } = require('../controllers/reportController');
-const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { tenantAuthAndValidationMiddleware, requireTenantPermission } = require('../middleware/tenantMiddleware');
 
 const router = express.Router();
 
-// All routes require authentication and Admin or Dashboard Viewer role
-router.use(authMiddleware);
-router.use(requireRole(['Admin', 'Dashboard Viewer']));
+// All routes require tenant authentication and validation
+router.use(tenantAuthAndValidationMiddleware);
 
 // Get available report dates
-router.get('/dates', getAvailableReportDates);
+router.get('/dates', requireTenantPermission(['all', 'reports', 'reports:read']), getAvailableReportDates);
 
 // Generate daily report (PDF download)
-router.get('/daily', generateDailyReport);
+router.get('/daily', requireTenantPermission(['all', 'reports', 'reports:read']), generateDailyReport);
 
 module.exports = router; 

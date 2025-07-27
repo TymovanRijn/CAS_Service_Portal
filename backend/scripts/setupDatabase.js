@@ -20,7 +20,7 @@ async function setupDatabase() {
     await client.query(`
       INSERT INTO Roles (name, description) 
       VALUES 
-        ('SAC', 'Security Asset Coordinator - Manages incidents and coordinates asset maintenance'),
+        ('Security Officer', 'Security Officer - Manages incidents and coordinates security operations'),
         ('Admin', 'System Administrator - Full system access and user management'),
         ('Dashboard Viewer', 'Management Dashboard Viewer - Read-only access to dashboards and reports')
       ON CONFLICT (name) DO NOTHING
@@ -76,13 +76,13 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         
-        -- SAC KPI Tracking Fields
+        -- Security Officer KPI Tracking Fields
         was_unregistered_incident BOOLEAN DEFAULT FALSE,
         requires_escalation BOOLEAN DEFAULT FALSE,
         escalation_reason VARCHAR(255),
         incorrect_diagnosis BOOLEAN DEFAULT FALSE,
         incorrect_service_party BOOLEAN DEFAULT FALSE,
-        self_resolved_by_sac BOOLEAN DEFAULT FALSE,
+        self_resolved_by_security BOOLEAN DEFAULT FALSE,
         self_resolution_description TEXT,
         estimated_downtime_minutes INTEGER,
         actual_response_time_minutes INTEGER,
@@ -99,7 +99,7 @@ async function setupDatabase() {
       ADD COLUMN IF NOT EXISTS escalation_reason VARCHAR(255),
       ADD COLUMN IF NOT EXISTS incorrect_diagnosis BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS incorrect_service_party BOOLEAN DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS self_resolved_by_sac BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS self_resolved_by_security BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS self_resolution_description TEXT,
       ADD COLUMN IF NOT EXISTS estimated_downtime_minutes INTEGER,
       ADD COLUMN IF NOT EXISTS actual_response_time_minutes INTEGER,

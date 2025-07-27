@@ -1,205 +1,253 @@
-# 🛡️ CAS Service Portal
+# 🛡️ SecureHub - Professional Incident & Action Management Platform
 
-**Security Asset Coordinator Portal voor Luchthavenbeveiligingsassets**
+**SecureHub** is a comprehensive incident and action management platform designed for modern organizations. Built with React, Node.js, and PostgreSQL, it provides a complete solution for managing incidents, tracking actions, and maintaining operational excellence.
 
-Een volledig digitaal platform voor het beheren van incidenten, acties en rapportages voor luchthavenbeveiligingsassets, met geavanceerde AI-integratie voor inzichten en automatisering.
+## 🌟 Key Features
 
-## 🚀 Features
+### 📊 **Incident Management**
+- **Create & Track Incidents**: Comprehensive incident logging with priority levels, categories, and locations
+- **File Attachments**: Support for images and documents
+- **Status Tracking**: Real-time incident status updates (Open → In Progress → Resolved)
+- **Advanced Search**: Filter incidents by status, priority, date range, and categories
 
-### ✅ Core Functionaliteiten
-- **📋 Incident Management:** Volledige workflow voor incidenten aanmaken, bewerken en volgen
-- **⚡ Action Coordination:** Acties aanmaken, toewijzen, oppakken en voltooien  
-- **👥 Service Party Coordination:** Multi-user actie toewijzing en samenwerking
-- **📊 Real-time Dashboard:** Live overzicht van incidenten en acties met KPI's
-- **🔍 Archive & Search:** Uitgebreide filtering en zoekfunctionaliteit
-- **📄 PDF Rapportage:** Automatische dagelijkse rapportage generatie
+### ⚡ **Action Management**  
+- **Action Planning**: Create and assign follow-up actions from incidents
+- **Team Collaboration**: Assign actions to specific team members or leave unassigned
+- **Progress Tracking**: Monitor action completion with status updates
+- **Deadline Management**: Set and track action due dates
 
-### 🤖 AI Module (NIEUW!)
-- **🧠 AI Insights:** Real-time AI-gegenereerde inzichten voor dashboard
-- **📈 Trend Analysis:** Automatische patroonherkenning in incident data
-- **📝 Monthly Reports:** AI-gegenereerde maandelijkse samenvattingen
-- **🔮 Predictive Analytics:** Basis voorspellingen voor asset beheer
-- **🌍 Nederlandse AI:** Ollama integratie voor lokale Nederlandse tekstgeneratie
+### 🧠 **AI-Powered Knowledge Base**
+- **Smart Content Storage**: Upload and organize operational knowledge and procedures
+- **AI Assistant**: Intelligent question-answering system that understands your knowledge base
+- **Content Search**: Semantic search through all stored knowledge
+- **Image Support**: Upload and reference visual guides and documentation
 
-### 📊 KPI Dashboard
-- **📈 Real-time Metrics:** Live KPI updates met auto-refresh (5 min)
-- **🎯 Performance Indicators:** Voltooiingspercentages en oplostijden
-- **📍 Location Analytics:** Prestatie-indicatoren per locatie
-- **📋 Category Analysis:** Incident analyse per categorie met trends
-- **⏱️ SLA Monitoring:** Service Level Agreement naleving tracking
-- **🔄 Period Filtering:** Week/Maand/Kwartaal filteropties
+### 📈 **Analytics & Reporting**
+- **KPI Dashboard**: Real-time key performance indicators
+- **Incident Analytics**: Trend analysis and performance metrics
+- **Action Statistics**: Team productivity and completion rates
+- **AI Insights**: Automated pattern recognition and recommendations
 
-### 🔐 Authenticatie & Autorisatie
-- **🔑 Role-based Access:** SAC, Admin, Dashboard Viewer rollen
-- **🛡️ JWT Security:** Moderne token-based authenticatie
-- **👤 User Management:** Complete gebruikersbeheer functionaliteit
-- **🔒 Protected Routes:** Beveiligde toegang tot alle modules
+### 👥 **Multi-Role Access Control**
+- **Security Officers**: Full operational access to incidents, actions, and knowledge base
+- **Administrators**: Complete system management and user administration
+- **Dashboard Viewers**: Read-only access to reports and analytics
 
-## 🏗️ Tech Stack
+## 🚀 Technology Stack
 
-### Backend
-- **Framework:** Node.js + Express.js
-- **Database:** PostgreSQL
-- **Authentication:** JWT Tokens
-- **File Upload:** Multer middleware
-- **PDF Generation:** Puppeteer
-- **🤖 AI Integration:** Ollama + Custom AI services
+### **Frontend**
+- **React 19** with TypeScript
+- **Tailwind CSS** for modern, responsive UI
+- **Custom UI Components** with shadcn/ui
+- **Real-time Updates** and responsive design
 
-### Frontend  
-- **Framework:** React 19.1.0 + TypeScript
-- **Styling:** Tailwind CSS + shadcn/ui components
-- **State Management:** React Context (AuthContext)
-- **Build Tool:** Create React App
-- **UI Components:** Modern, responsive design
+### **Backend**
+- **Node.js** with Express.js
+- **PostgreSQL** database with advanced querying
+- **JWT Authentication** with role-based access control
+- **File Upload** handling with multer
 
-### Database Schema
-- **Users & Roles:** Multi-role gebruikersbeheer
-- **Incidents:** Hoofdentiteit met categorieën en locaties
-- **Actions:** Gekoppelde acties met status tracking
-- **Attachments:** File upload ondersteuning
-- **🤖 AI_Reports:** AI-gegenereerde rapporten en analyses
+### **AI Integration**
+- **Ollama** for local AI processing
+- **Semantic Search** capabilities
+- **Intelligent Content Processing**
+- **Automated Insights Generation**
 
-## 📦 Installation & Setup
+## 📦 Quick Start
 
 ### Prerequisites
-- Node.js (v16 of hoger)
-- PostgreSQL (v12 of hoger)
-- npm of yarn package manager
+- Node.js (v18+)
+- PostgreSQL (v13+)
+- Ollama (for AI features)
 
-### 1. Clone Repository
-\`\`\`bash
-git clone <repository-url>
-cd CAS_Service_Portal
-\`\`\`
+### Installation
 
-### 2. Backend Setup
-\`\`\`bash
-cd backend
-npm install
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd SecureHub
+   ```
 
-# Database setup
-node scripts/setupDatabase.js
-node scripts/createTestUsers.js
-node scripts/createTestData.js
+2. **Setup Backend**
+   ```bash
+   cd backend
+   npm install
+   cp env.example .env
+   # Configure your database and settings in .env
+   ```
 
-# Start backend server
-npm start
-\`\`\`
+3. **Setup Frontend**
+   ```bash
+   cd ../frontend
+   npm install
+   cp env.example .env
+   # Configure API endpoints in .env
+   ```
 
-### 3. Frontend Setup
-\`\`\`bash
-cd frontend
-npm install
+4. **Initialize Database**
+   ```bash
+   cd ../backend
+   node scripts/setupDatabase.js
+   node scripts/createTestUsers.js
+   ```
 
-# Start development server
-npm start
-\`\`\`
+5. **Start the Application**
+   ```bash
+   # Terminal 1 - Backend
+   cd backend && npm start
+   
+   # Terminal 2 - Frontend  
+   cd frontend && npm start
+   ```
 
-### 4. 🤖 AI Setup (Optioneel)
-\`\`\`bash
-# Installeer Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Download Nederlands model
-ollama pull llama2:7b
-
-# Configureer AI in backend/ai/config.js
-\`\`\`
-
-## 🎮 Usage
+6. **Access SecureHub**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3001
 
 ### Test Accounts
-\`\`\`
-📧 sac@test.com (SAC role) - Password: test123
-📧 admin@test.com (Admin role) - Password: test123  
-📧 viewer@test.com (Dashboard Viewer role) - Password: test123
-\`\`\`
+- **Security Officer**: security@test.com / test123
+- **Administrator**: admin@test.com / test123  
+- **Dashboard Viewer**: viewer@test.com / test123
 
-### Default URLs
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:3001
-- **Database:** PostgreSQL op standaard poort 5432
+## 💼 Use Cases
 
-## 📊 API Endpoints
+### **Corporate Security**
+- Incident reporting and response coordination
+- Security procedure documentation and training
+- Performance monitoring and compliance tracking
 
-### Authentication
-- \`POST /api/auth/login\` - User login
-- \`POST /api/auth/register\` - User registration
-- \`GET /api/auth/profile\` - User profile
+### **Facilities Management**
+- Equipment failure tracking and maintenance scheduling
+- Vendor coordination and service management
+- Operational procedure documentation
 
-### Incidents
-- \`GET /api/incidents/stats\` - Incident statistieken
-- \`GET /api/incidents/archive\` - Incident archief met filtering
-- \`POST /api/incidents/\` - Nieuw incident aanmaken
-- \`PUT /api/incidents/:id\` - Incident bijwerken
+### **Healthcare Operations**
+- Patient safety incident management
+- Equipment maintenance and compliance
+- Clinical procedure documentation and training
 
-### Actions
-- \`GET /api/actions/stats\` - Actie statistieken
-- \`POST /api/actions/\` - Nieuwe actie aanmaken
-- \`PUT /api/actions/:id/take\` - Actie oppakken
-- \`PUT /api/actions/:id/status\` - Status bijwerken
+### **Manufacturing & Industrial**
+- Safety incident tracking and analysis
+- Equipment maintenance and downtime management
+- Standard operating procedure management
 
-### 🤖 AI Endpoints
-- \`GET /api/ai/insights\` - Real-time AI insights
-- \`GET /api/ai/summaries\` - AI rapporten lijst
-- \`POST /api/ai/summaries/generate\` - Genereer nieuw AI rapport
+### **Educational Institutions**
+- Campus safety incident management
+- Facility maintenance coordination
+- Emergency procedure documentation
 
 ## 🔧 Configuration
 
 ### Environment Variables
-\`\`\`env
+
+**Backend (.env)**
+```env
 # Database
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=cas_portal
+DB_NAME=securehub
 DB_USER=your_username
 DB_PASSWORD=your_password
 
-# JWT
-JWT_SECRET=your_jwt_secret
+# Authentication
+JWT_SECRET=your-super-secret-jwt-key
 
-# 🤖 AI Configuration
-AI_PROVIDER=ollama
+# AI Integration
 OLLAMA_BASE_URL=http://localhost:11434
-AI_MODEL=llama2:7b
-\`\`\`
+OLLAMA_MODEL=qwen2.5:3b
 
-## 📈 Development Status
+# Server
+PORT=3001
+NODE_ENV=development
+```
 
-### ✅ Volledig Geïmplementeerd (Production Ready)
-- Complete incident management workflow
-- Action coordination systeem
-- KPI Dashboard met real-time metrics
-- Role-based authentication
-- File upload/download functionaliteit
-- PDF rapportage systeem
-- 🤖 AI foundation met Ollama integratie
-- Modern responsive UI/UX
+**Frontend (.env)**
+```env
+REACT_APP_API_URL=http://localhost:3001
+```
 
-### 🚧 In Ontwikkeling
-- Geavanceerde AI analytics en voorspellingen
-- Real-time notifications systeem
-- Email notification integratie
-- Advanced charts en visualisaties
+## 📚 API Documentation
 
-## 🤝 Contributing
+### **Authentication Endpoints**
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/verify` - Token verification
 
-1. Fork het project
-2. Maak een feature branch (\`git checkout -b feature/AmazingFeature\`)
-3. Commit je changes (\`git commit -m 'Add some AmazingFeature'\`)
-4. Push naar de branch (\`git push origin feature/AmazingFeature\`)
-5. Open een Pull Request
+### **Incident Management**
+- `GET /api/incidents` - List incidents with filtering
+- `POST /api/incidents` - Create new incident
+- `PUT /api/incidents/:id` - Update incident
+- `GET /api/incidents/stats` - Incident statistics
+
+### **Action Management**
+- `GET /api/actions` - List actions with filtering
+- `POST /api/actions` - Create new action
+- `PUT /api/actions/:id` - Update action
+- `PUT /api/actions/:id/take` - Assign action to current user
+
+### **Knowledge Base**
+- `GET /api/knowledge-base` - List knowledge base entries
+- `POST /api/knowledge-base` - Create new entry
+- `POST /api/knowledge-base/ask` - AI-powered question answering
+- `POST /api/knowledge-base/search` - Search knowledge base
+
+### **AI Features**
+- `GET /api/ai/insights` - Get AI-generated insights
+- `POST /api/ai/insights/refresh` - Force refresh insights
+
+## 🔒 Security Features
+
+- **JWT-based Authentication** with secure token handling
+- **Role-based Access Control** with granular permissions
+- **Input Validation** and sanitization
+- **SQL Injection Protection** with parameterized queries
+- **File Upload Security** with type validation
+- **CORS Configuration** for secure cross-origin requests
+
+## 📈 Performance & Scalability
+
+- **Optimized Database Queries** with proper indexing
+- **Efficient File Handling** with organized storage
+- **Responsive UI** with optimized loading states
+- **Caching Strategies** for improved performance
+- **Background Processing** for AI insights generation
+
+## 🛠️ Development
+
+### **Project Structure**
+```
+SecureHub/
+├── backend/                 # Node.js API server
+│   ├── controllers/        # Business logic
+│   ├── routes/            # API endpoints
+│   ├── middleware/        # Authentication & validation
+│   ├── ai/               # AI integration services
+│   └── scripts/          # Database setup scripts
+├── frontend/              # React application
+│   ├── src/components/   # UI components
+│   ├── src/contexts/     # React contexts
+│   └── src/lib/         # Utility functions
+└── docs/                 # Documentation
+```
+
+### **Contributing**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
 ## 📄 License
 
-Dit project is ontwikkeld voor interne gebruik binnen de luchthavenbeveiligingsorganisatie.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## �� Support
+## 🤝 Support
 
-Voor vragen of ondersteuning, neem contact op met het development team.
+For support, feature requests, or bug reports:
+- Create an issue on GitHub
+- Contact the development team
+- Check the documentation wiki
 
 ---
 
-**🎯 Status:** Production Ready + 🤖 AI Foundation Complete  
-**📅 Laatste Update:** Juni 2025  
-**🔄 Versie:** 1.0.0 met AI Integration
+**SecureHub** - *Professional Incident & Action Management for Modern Organizations*

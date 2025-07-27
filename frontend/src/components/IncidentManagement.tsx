@@ -3,8 +3,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { IncidentDetailModal } from './IncidentDetailModal';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+import { CreateIncidentModal } from './CreateIncidentModal';
+import { api } from '../lib/api';
 
 interface Incident {
   id: number;
@@ -41,7 +41,7 @@ interface Location {
   description: string;
 }
 
-export const Archive: React.FC = () => {
+export const IncidentManagement: React.FC = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -55,6 +55,7 @@ export const Archive: React.FC = () => {
   const [error, setError] = useState('');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isIncidentDetailModalOpen, setIsIncidentDetailModalOpen] = useState(false);
+  const [isCreateIncidentModalOpen, setIsCreateIncidentModalOpen] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -81,18 +82,8 @@ export const Archive: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${BACKEND_URL}/api/categories`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data.categories || []);
-      }
+      const data = await api.get('/api/categories');
+      setCategories(data.categories || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
     }
@@ -100,70 +91,34 @@ export const Archive: React.FC = () => {
 
   const fetchLocations = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${BACKEND_URL}/api/locations`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setLocations(data.locations || []);
-      }
+      const data = await api.get('/api/locations');
+      setLocations(data.locations || []);
     } catch (err) {
       console.error('Error fetching locations:', err);
     }
   };
 
   const fetchIncidents = async () => {
-    setIsLoading(true);
-    setError('');
-
     try {
-      const token = localStorage.getItem('token');
-      
-      // Build query parameters
+      setIsLoading(true);
+      setError('');
+
       const params = new URLSearchParams({
         page: pagination.page.toString(),
-        limit: pagination.limit.toString()
+        limit: pagination.limit.toString(),
+        ...filters
       });
 
-      if (filters.status) params.append('status', filters.status);
-      if (filters.priority) params.append('priority', filters.priority);
-      if (filters.category) params.append('category', filters.category);
-      if (filters.location) params.append('location', filters.location);
-      if (filters.startDate) params.append('startDate', filters.startDate);
-      if (filters.endDate) params.append('endDate', filters.endDate);
-
-      const response = await fetch(`${BACKEND_URL}/api/incidents/archive?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        let filteredIncidents = data.incidents || [];
-
-        // Client-side search filter (for title and description)
-        if (filters.search) {
-          const searchLower = filters.search.toLowerCase();
-          filteredIncidents = filteredIncidents.filter((incident: Incident) =>
-            incident.title.toLowerCase().includes(searchLower) ||
-            incident.description.toLowerCase().includes(searchLower)
-          );
-        }
-
-        setIncidents(filteredIncidents);
-        setPagination(data.pagination);
-      } else {
-        setError('Fout bij het laden van incidenten');
-      }
+      const data = await api.get(`/api/incidents/archive?${params}`);
+      
+      setIncidents(data.incidents || []);
+      setPagination(prev => ({
+        ...prev,
+        total: data.pagination?.total || data.total || 0,
+        totalPages: data.pagination?.totalPages || Math.ceil((data.pagination?.total || data.total || 0) / pagination.limit)
+      }));
     } catch (err) {
-      console.error('Error fetching incidents:', err);
+      console.error('❌ Error fetching incidents:', err);
       setError('Netwerkfout bij het laden van incidenten');
     } finally {
       setIsLoading(false);
@@ -172,7 +127,7 @@ export const Archive: React.FC = () => {
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page when filtering
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const clearFilters = () => {
@@ -203,6 +158,11 @@ export const Archive: React.FC = () => {
     setSelectedIncident(null);
   };
 
+  const handleIncidentCreated = () => {
+    fetchIncidents();
+    setIsCreateIncidentModalOpen(false);
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
       case 'high': return 'text-red-600 bg-red-50 border-red-200';
@@ -216,7 +176,7 @@ export const Archive: React.FC = () => {
     switch (status?.toLowerCase()) {
       case 'open': return 'text-blue-600 bg-blue-50 border-blue-200';
       case 'in progress': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'closed': return 'text-green-600 bg-green-50 border-green-200';
+      case 'closed': return 'text-gray-600 bg-gray-50 border-gray-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
@@ -234,9 +194,20 @@ export const Archive: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Incident Archief</h1>
-        <p className="text-gray-600">Bekijk en zoek historische incidenten</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Incident Management</h1>
+          <p className="text-gray-600">Beheer en zoek alle incidenten</p>
+        </div>
+        <Button
+          onClick={() => setIsCreateIncidentModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Nieuw Incident
+        </Button>
       </div>
 
       {/* Filters */}
@@ -319,7 +290,7 @@ export const Archive: React.FC = () => {
 
             {/* Start Date */}
             <div>
-              <label className="text-sm font-medium mb-1 block">Van datum</label>
+              <label className="text-sm font-medium mb-1 block">Start Datum</label>
               <Input
                 type="date"
                 value={filters.startDate}
@@ -329,147 +300,121 @@ export const Archive: React.FC = () => {
 
             {/* End Date */}
             <div>
-              <label className="text-sm font-medium mb-1 block">Tot datum</label>
+              <label className="text-sm font-medium mb-1 block">Eind Datum</label>
               <Input
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
               />
             </div>
+          </div>
 
-            {/* Clear Filters Button */}
-            <div className="flex items-end">
-              <Button variant="outline" onClick={clearFilters} className="w-full">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Wis filters
-              </Button>
+          {/* Filter Actions */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Filters Wissen
+            </Button>
+            <div className="text-sm text-gray-500">
+              {pagination.total} incidenten gevonden
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Results */}
+      {/* Incidents List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Resultaten</CardTitle>
-              <CardDescription>
-                {pagination.total} incidenten gevonden
-                {pagination.total > 0 && (
-                  <> • Pagina {pagination.page} van {pagination.totalPages}</>
-                )}
-              </CardDescription>
-            </div>
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page <= 1}
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Vorige
-                </Button>
-                <span className="text-sm text-gray-500 px-2">
-                  {pagination.page} / {pagination.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.totalPages}
-                >
-                  Volgende
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Button>
-              </div>
-            )}
-          </div>
+          <CardTitle className="text-lg">Incidenten</CardTitle>
+          <CardDescription>Alle incidenten in het systeem</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="p-3 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md mb-4">
+            <div className="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md mb-4">
               <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {error}
+                <span>{error}</span>
               </div>
             </div>
           )}
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <svg className="animate-spin h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div className="text-center py-8">
+              <svg className="animate-spin h-8 w-8 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span>Incidenten laden...</span>
+              <p className="text-muted-foreground">Incidenten laden...</p>
             </div>
           ) : incidents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p>Geen incidenten gevonden met de huidige filters</p>
-              <Button variant="outline" onClick={clearFilters} className="mt-2">
-                Wis alle filters
-              </Button>
+              <p>Geen incidenten gevonden</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {incidents.map((incident) => (
                 <div
                   key={incident.id}
-                  className="p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer hover:bg-gray-50"
                   onClick={() => handleIncidentClick(incident)}
+                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">#{incident.id} - {incident.title}</h4>
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-2">{incident.description}</p>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(incident.priority)}`}>
-                        {incident.priority}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(incident.status)}`}>
-                        {incident.status}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center space-x-4">
-                      {incident.location_name && (
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 truncate">
+                          #{incident.id} - {incident.title}
+                        </h3>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(incident.priority)}`}>
+                          {incident.priority}
+                        </span>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(incident.status)}`}>
+                          {incident.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        {incident.description}
+                      </p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        {incident.location_name && (
+                          <span className="flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            {incident.location_name}
+                          </span>
+                        )}
+                        {incident.category_name && (
+                          <span className="flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            {incident.category_name}
+                          </span>
+                        )}
                         <span className="flex items-center">
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          {incident.location_name}
+                          {incident.created_by_name}
                         </span>
-                      )}
-                      {incident.category_name && (
                         <span className="flex items-center">
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          {incident.category_name}
+                          {formatDate(incident.created_at)}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span>{incident.created_by_name}</span>
-                      <span>•</span>
-                      <span>{formatDate(incident.created_at)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -484,59 +429,27 @@ export const Archive: React.FC = () => {
         <div className="flex items-center justify-center space-x-2">
           <Button
             variant="outline"
-            onClick={() => handlePageChange(1)}
-            disabled={pagination.page <= 1}
-          >
-            Eerste
-          </Button>
-          <Button
-            variant="outline"
             onClick={() => handlePageChange(pagination.page - 1)}
             disabled={pagination.page <= 1}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            Vorige
           </Button>
           
-          {/* Page numbers */}
-          {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-            const pageNum = Math.max(1, pagination.page - 2) + i;
-            if (pageNum <= pagination.totalPages) {
-              return (
-                <Button
-                  key={pageNum}
-                  variant={pageNum === pagination.page ? "default" : "outline"}
-                  onClick={() => handlePageChange(pageNum)}
-                  className="w-10"
-                >
-                  {pageNum}
-                </Button>
-              );
-            }
-            return null;
-          })}
+          <span className="text-sm text-gray-600">
+            Pagina {pagination.page} van {pagination.totalPages}
+          </span>
           
           <Button
             variant="outline"
             onClick={() => handlePageChange(pagination.page + 1)}
             disabled={pagination.page >= pagination.totalPages}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handlePageChange(pagination.totalPages)}
-            disabled={pagination.page >= pagination.totalPages}
-          >
-            Laatste
+            Volgende
           </Button>
         </div>
       )}
 
-      {/* Incident Detail Modal */}
+      {/* Modals */}
       <IncidentDetailModal
         incident={selectedIncident}
         isOpen={isIncidentDetailModalOpen}
@@ -545,6 +458,12 @@ export const Archive: React.FC = () => {
           setSelectedIncident(null);
         }}
         onIncidentUpdated={handleIncidentUpdated}
+      />
+
+      <CreateIncidentModal
+        isOpen={isCreateIncidentModalOpen}
+        onClose={() => setIsCreateIncidentModalOpen(false)}
+        onIncidentCreated={handleIncidentCreated}
       />
     </div>
   );
