@@ -129,6 +129,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve React app for all other routes (production)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
+    // Skip API routes - let them be handled by their specific routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ message: 'API endpoint not found' });
+    }
     res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
   });
 }
