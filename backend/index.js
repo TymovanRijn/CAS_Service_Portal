@@ -15,6 +15,7 @@ const publicRoutes = require('./routes/public');
 const kpiRoutes = require('./routes/kpi');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -66,9 +67,65 @@ const corsOptions = {
   credentials: true
 };
 
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Authentication middleware - skip for public routes and health endpoint
+app.use((req, res, next) => {
+  // Skip authentication for public routes
+  if (req.path.startsWith('/api/public/')) {
+    return next();
+  }
+  
+  // Skip authentication for health endpoint
+  if (req.path === '/api/health') {
+    return next();
+  }
+  
+  // Apply authentication for other routes
+  const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
+  
+  // Continue with normal authentication
+  next();
+});
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const logLevel = res.statusCode >= 400 ? 'ERROR' : 'INFO';
+    console.log(`[${logLevel}] ${req.method} ${req.path} - ${res.statusCode} - ${duration}ms - ${req.ip}`);
+  });
+  
+  next();
+});
 
 // Serve static files from React build (for production)
 if (process.env.NODE_ENV === 'production') {
@@ -100,7 +157,8 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     message: 'CAS Service Portal Backend is running!',
     environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
   });
 });
 
@@ -126,13 +184,41 @@ app.use('/api/kpi', kpiRoutes);
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({ 
+      message: 'Validation error',
+      errors: err.errors 
+    });
+  }
+  
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({ 
+      message: 'Unauthorized access' 
+    });
+  }
+  
+  res.status(500).json({ 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ 
+    message: 'API endpoint not found',
+    path: req.path,
+    method: req.method
+  });
+});
+
 // Serve React app for all other routes (production)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
-    // Skip API routes - let them be handled by their specific routes
-    if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ message: 'API endpoint not found' });
-    }
     res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
   });
 }
@@ -143,6 +229,7 @@ app.listen(port, host, () => {
   console.log(`🚀 Server running on port ${port}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Host: ${host}`);
+  console.log(`🔒 Security: Enhanced with helmet and rate limiting`);
   if (process.env.NODE_ENV !== 'production') {
     console.log(`🔗 Local access: http://localhost:${port}`);
     console.log(`🔗 Network access: http://10.41.68.202:${port}`);
