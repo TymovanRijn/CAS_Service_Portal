@@ -91,29 +91,6 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Authentication middleware - skip for public routes and health endpoint
-app.use((req, res, next) => {
-  // Skip authentication for public routes
-  if (req.path.startsWith('/api/public/')) {
-    return next();
-  }
-  
-  // Skip authentication for health endpoint
-  if (req.path === '/api/health') {
-    return next();
-  }
-  
-  // Apply authentication for other routes
-  const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
-  }
-  
-  // Continue with normal authentication
-  next();
-});
-
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
@@ -164,6 +141,29 @@ app.get('/api/health', (req, res) => {
 
 // Public routes (no authentication required) - MUST be before other routes
 app.use('/api/public', publicRoutes);
+
+// Authentication middleware - skip for public routes and health endpoint
+app.use((req, res, next) => {
+  // Skip authentication for public routes
+  if (req.path.startsWith('/api/public/')) {
+    return next();
+  }
+  
+  // Skip authentication for health endpoint
+  if (req.path === '/api/health') {
+    return next();
+  }
+  
+  // Apply authentication for other routes
+  const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
+  
+  // Continue with normal authentication
+  next();
+});
 
 // Multi-tenant routes (must be before generic /api routes)
 app.use('/api/super-admin', superAdminRoutes);
