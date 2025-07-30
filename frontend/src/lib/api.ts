@@ -1,4 +1,4 @@
-const BACKEND_URL = 'https://sac.cas-nl.com:3001';
+const BACKEND_URL = 'https://sac.cas-nl.com';
 
 export interface ApiOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';

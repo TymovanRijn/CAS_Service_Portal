@@ -187,7 +187,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
             <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
               {currentTenant?.settings?.logoPath ? (
                 <img
-                  src={`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'}/${currentTenant.settings.logoPath}`}
+                  src={`${process.env.REACT_APP_BACKEND_URL || 'https://sac.cas-nl.com'}/${currentTenant.settings.logoPath}`}
                   alt={`${currentTenant.name} logo`}
                   className="w-8 h-8 rounded object-cover flex-shrink-0"
                 />
@@ -333,7 +333,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
             <div className="flex items-center space-x-4">
               {currentTenant?.settings?.logoPath ? (
                 <img
-                  src={`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'}/${currentTenant.settings.logoPath}`}
+                  src={`${process.env.REACT_APP_BACKEND_URL || 'https://sac.cas-nl.com'}/${currentTenant.settings.logoPath}`}
                   alt={`${currentTenant.name} logo`}
                   className="w-12 h-12 rounded-lg object-cover shadow-sm"
                 />

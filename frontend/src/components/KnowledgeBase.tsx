@@ -87,7 +87,7 @@ const KnowledgeBase: React.FC = () => {
     image: null as File | null
   });
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://sac.cas-nl.com/api';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');

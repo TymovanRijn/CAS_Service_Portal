@@ -6,7 +6,7 @@ import { CreateActionModal } from './CreateActionModal';
 import { ActionDetailModal } from './ActionDetailModal';
 import { useAuth } from '../contexts/AuthContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://sac.cas-nl.com';
 
 interface Action {
   id: number;
