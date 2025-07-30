@@ -25,7 +25,7 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 safe-area-top safe-area-bottom">
         <div className="text-center">
           <svg className="animate-spin h-8 w-8 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -49,7 +49,7 @@ const AppContent: React.FC = () => {
   // Tenant user must have tenant context
   if (!currentTenant) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
         <div className="text-center">
           <div className="bg-white rounded-lg p-8 shadow-lg max-w-md">
             <svg className="w-16 h-16 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,7 +61,7 @@ const AppContent: React.FC = () => {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 touch-manipulation min-h-[44px]"
             >
               Reload Application
             </button>
@@ -96,7 +96,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 safe-area-top safe-area-bottom">
       {/* Navigation Sidebar */}
       <Navigation 
         currentPage={currentPage} 
@@ -104,13 +104,15 @@ const AppContent: React.FC = () => {
         onSidebarToggle={handleSidebarToggle}
       />
       
-      {/* Main Content - Fully responsive */}
+      {/* Main Content - Fully responsive with mobile optimizations */}
       <div className={`transition-all duration-300 ease-in-out ${
         isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}>
-        {/* Mobile-first padding and spacing */}
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 pt-16 lg:pt-6">
-          {renderCurrentPage()}
+        {/* Mobile-first padding and spacing with safe areas */}
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 pt-20 lg:pt-6 safe-area-left safe-area-right">
+          <div className="max-w-7xl mx-auto">
+            {renderCurrentPage()}
+          </div>
         </main>
       </div>
     </div>

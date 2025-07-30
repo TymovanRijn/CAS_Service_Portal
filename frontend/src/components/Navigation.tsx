@@ -161,25 +161,21 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
 
   return (
     <>
-      {/* Mobile menu button - Improved positioning and touch target */}
-      <div className="lg:hidden fixed top-3 left-3 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="bg-white shadow-lg hover:shadow-xl transition-shadow touch-manipulation min-w-[44px] min-h-[44px] p-2"
-        >
-          {isSidebarOpen ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Mobile menu button - Only show when sidebar is closed */}
+      {isSidebarOpen ? null : (
+        <div className="lg:hidden fixed top-4 left-4 z-50 safe-area-top">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSidebarOpen(true)}
+            className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation min-w-[48px] min-h-[48px] p-3 border-2 border-gray-200 hover:border-gray-300"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-          )}
-        </Button>
-      </div>
+          </Button>
+        </div>
+      )}
 
       {/* Desktop Sidebar - Unchanged but with better transitions */}
       <div className={`hidden lg:flex fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out shadow-sm ${
@@ -327,60 +323,60 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
         </div>
       </div>
 
-      {/* Mobile Sidebar - Enhanced with better touch experience */}
-      <div className={`lg:hidden fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out shadow-xl ${
+      {/* Mobile Sidebar - Enhanced with better touch experience and safe areas */}
+      <div className={`lg:hidden fixed inset-y-0 left-0 z-40 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out shadow-2xl ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="flex flex-col h-full">
-          {/* Mobile Header - Enhanced */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center space-x-3">
+        <div className="flex flex-col h-full safe-area-left safe-area-right">
+          {/* Mobile Header - Enhanced with safe areas */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 safe-area-top">
+            <div className="flex items-center space-x-4">
               {currentTenant?.settings?.logoPath ? (
                 <img
                   src={`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'}/${currentTenant.settings.logoPath}`}
                   alt={`${currentTenant.name} logo`}
-                  className="w-10 h-10 rounded object-cover"
+                  className="w-12 h-12 rounded-lg object-cover shadow-sm"
                 />
               ) : (
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                  className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm"
                   style={{ backgroundColor: currentTenant?.settings?.primaryColor || '#3B82F6' }}
                 >
                   {currentTenant?.name?.charAt(0) || 'C'}
                 </div>
               )}
               <div>
-                <h1 className="text-base font-bold leading-tight" title={currentTenant?.name || 'CAS Portal'}>
+                <h1 className="text-lg font-bold leading-tight text-gray-900" title={currentTenant?.name || 'CAS Portal'}>
                   {currentTenant?.name || 'CAS Portal'}
                 </h1>
-                <p className="text-xs text-gray-500">Incident & Action Management</p>
+                <p className="text-sm text-gray-600">Incident & Action Management</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsSidebarOpen(false)}
-              className="touch-manipulation min-w-[44px] min-h-[44px] p-2 hover:bg-gray-200"
+              className="touch-manipulation min-w-[48px] min-h-[48px] p-3 hover:bg-gray-200 rounded-full"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </Button>
           </div>
 
           {/* Mobile User Info - Enhanced */}
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center space-x-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center shadow-sm">
+                <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-gray-900 truncate">{user.username}</p>
+                <p className="text-lg font-semibold text-gray-900 truncate">{user.username}</p>
                 <p className="text-sm text-gray-600 truncate">{user.email}</p>
                 {user.role_name && (
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border mt-2 ${getRoleColor(user.role_name)}`}>
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border mt-3 ${getRoleColor(user.role_name)}`}>
                     {user.role_name}
                   </span>
                 )}
@@ -388,16 +384,16 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
             </div>
           </div>
 
-          {/* Mobile Navigation - Enhanced touch targets */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Navigatie</h3>
+          {/* Mobile Navigation - Enhanced touch targets with better spacing */}
+          <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Navigatie</h3>
             </div>
             {navigationItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handlePageChange(item.id)}
-                className={`w-full flex items-center space-x-4 px-4 py-4 rounded-xl text-left transition-all duration-200 touch-manipulation active:scale-95 ${
+                className={`w-full flex items-center space-x-4 px-5 py-5 rounded-2xl text-left transition-all duration-200 touch-manipulation active:scale-95 min-h-[64px] ${
                   currentPage === item.id
                     ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
                     : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
@@ -415,20 +411,20 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
                   </p>
                 </div>
                 {currentPage === item.id && (
-                  <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
+                  <div className="w-3 h-3 bg-primary-foreground rounded-full flex-shrink-0"></div>
                 )}
               </button>
             ))}
           </nav>
 
-          {/* Mobile Footer - Enhanced */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
+          {/* Mobile Footer - Enhanced with safe areas */}
+          <div className="p-6 border-t border-gray-200 bg-gray-50 safe-area-bottom">
             <Button
               variant="outline"
               onClick={logout}
-              className="w-full justify-start py-3 text-base font-medium hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-200 touch-manipulation active:scale-95"
+              className="w-full justify-start py-4 text-base font-medium hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-200 touch-manipulation active:scale-95 min-h-[56px] rounded-xl"
             >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               Uitloggen
@@ -440,7 +436,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
       {/* Enhanced Overlay for mobile with backdrop blur */}
       {isSidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-all duration-300"
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-all duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

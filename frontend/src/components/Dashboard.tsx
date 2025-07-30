@@ -264,7 +264,7 @@ export const Dashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <svg className="animate-spin h-8 w-8 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -279,35 +279,33 @@ export const Dashboard: React.FC = () => {
       // Permission-based Dashboard - Show operational data for users with dashboard access
     if (hasPermission(['dashboard:read', 'incidents:read', 'actions:read'])) {
     return (
-      <div className="space-y-6">
-          {/* Welcome Section */}
-          <div className="mb-6">
+      <div className="space-y-4 sm:space-y-6">
+          {/* Welcome Section - Mobile optimized */}
+          <div className="mb-4 sm:mb-6">
             <div className="flex items-center space-x-3 mb-2">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
                 {getRoleIcon(user.role_name || 'User')}
               </div>
               <div>
-                <h2 className="text-xl font-bold">Welkom terug, {user.username}!</h2>
-                <p className="text-muted-foreground">{user.role_description || user.role_name}</p>
+                <h2 className="text-lg sm:text-xl font-bold">Welkom terug, {user.username}!</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">{user.role_description || user.role_name}</p>
               </div>
             </div>
           </div>
 
-
-
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Two Column Layout - Mobile optimized */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Left Column - Today's Incidents */}
             {hasPermission(['incidents:read']) && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
+            <Card className="mobile-card">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <CardTitle className="text-lg">Incidenten van Vandaag</CardTitle>
-                    <CardDescription>Alle incidenten die vandaag zijn gemeld</CardDescription>
+                    <CardTitle className="text-base sm:text-lg">Incidenten van Vandaag</CardTitle>
+                    <CardDescription className="text-sm">Alle incidenten die vandaag zijn gemeld</CardDescription>
                   </div>
                   {hasPermission(['incidents:create']) && (
-                  <Button size="sm" onClick={() => setIsCreateIncidentModalOpen(true)}>
+                  <Button size="sm" onClick={() => setIsCreateIncidentModalOpen(true)} className="mobile-btn-base w-full sm:w-auto">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
@@ -316,25 +314,25 @@ export const Dashboard: React.FC = () => {
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="max-h-96 overflow-y-auto space-y-3">
+              <CardContent className="p-4 sm:p-6">
+                <div className="max-h-80 sm:max-h-96 overflow-y-auto space-y-3">
                   {todaysIncidents.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                      <svg className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      <p>Geen incidenten vandaag gemeld</p>
+                      <p className="text-sm sm:text-base">Geen incidenten vandaag gemeld</p>
                     </div>
                   ) : (
                     todaysIncidents.map((incident) => (
                       <div 
                         key={incident.id} 
-                        className="p-3 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer hover:bg-muted/10"
+                        className="p-3 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer hover:bg-muted/10 touch-manipulation"
                         onClick={() => handleIncidentClick(incident)}
                       >
                         <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium text-sm line-clamp-1">{incident.title}</h4>
-                          <div className="flex items-center space-x-1 ml-2">
+                          <h4 className="font-medium text-sm line-clamp-1 flex-1 mr-2">{incident.title}</h4>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-1 flex-shrink-0">
                             <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(incident.priority)}`}>
                               {incident.priority}
                             </span>
@@ -344,8 +342,8 @@ export const Dashboard: React.FC = () => {
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{incident.description}</p>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center space-x-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             {incident.location_name && (
                               <span className="flex items-center">
                                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,10 +361,19 @@ export const Dashboard: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <span>{incident.created_by_name}</span>
-                            <span>•</span>
-                            <span>{formatTime(incident.created_at)}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {incident.created_by_name}
+                            </span>
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {formatTime(incident.created_at)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -379,15 +386,15 @@ export const Dashboard: React.FC = () => {
 
             {/* Right Column - Pending Actions */}
             {hasPermission(['actions:read']) && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
+            <Card className="mobile-card">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <CardTitle className="text-lg">Openstaande Acties</CardTitle>
-                    <CardDescription>Acties die nog uitgevoerd moeten worden</CardDescription>
+                    <CardTitle className="text-base sm:text-lg">Openstaande Acties</CardTitle>
+                    <CardDescription className="text-sm">Acties die wachten op uitvoering</CardDescription>
                   </div>
                   {hasPermission(['actions:create']) && (
-                  <Button variant="outline" size="sm" onClick={() => setIsCreateActionModalOpen(true)}>
+                  <Button size="sm" onClick={() => setIsCreateActionModalOpen(true)} className="mobile-btn-base w-full sm:w-auto">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
@@ -396,103 +403,68 @@ export const Dashboard: React.FC = () => {
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="max-h-96 overflow-y-auto space-y-3">
+              <CardContent className="p-4 sm:p-6">
+                <div className="max-h-80 sm:max-h-96 overflow-y-auto space-y-3">
                   {pendingActions.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                      <svg className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
-                      <p>Geen openstaande acties</p>
+                      <p className="text-sm sm:text-base">Geen openstaande acties</p>
                     </div>
                   ) : (
                     pendingActions.map((action) => (
                       <div 
                         key={action.id} 
-                        className="p-3 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer"
+                        className="p-3 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer hover:bg-muted/10 touch-manipulation"
                         onClick={() => handleActionClick(action)}
                       >
                         <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm mb-1 line-clamp-1">{action.incident_title}</h4>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{action.action_description}</p>
-                          </div>
-                          <div className="flex items-center space-x-1 ml-2">
+                          <h4 className="font-medium text-sm line-clamp-1 flex-1 mr-2">{action.action_description}</h4>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-1 flex-shrink-0">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(action.status)}`}>
+                              {action.status}
+                            </span>
                             <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(action.incident_priority)}`}>
                               {action.incident_priority}
                             </span>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(action.status)}`}>
-                              {action.status === 'Pending' ? 'Openstaand' : 
-                               action.status === 'In Progress' ? 'In Behandeling' : 'Voltooid'}
-                            </span>
                           </div>
                         </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            {!action.assigned_to && action.status === 'Pending' && (
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleTakeAction(action.id);
-                                }}
-                                className="h-7 px-2 text-xs bg-blue-600 hover:bg-blue-700"
-                              >
+                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                          Incident: {action.incident_title}
+                        </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {action.location_name && (
+                              <span className="flex items-center">
                                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                 </svg>
-                                Oppakken
-                              </Button>
+                                {action.location_name}
+                              </span>
                             )}
-                            
-                            {action.assigned_to === user?.id && action.status === 'In Progress' && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCompleteAction(action.id);
-                                  }}
-                                  className="h-7 px-2 text-xs border-green-200 text-green-700 hover:bg-green-50"
-                                >
-                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  Voltooien
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReleaseAction(action.id);
-                                  }}
-                                  className="h-7 px-2 text-xs border-orange-200 text-orange-700 hover:bg-orange-50"
-                                >
-                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                  Loslaten
-                                </Button>
-                              </>
+                            {action.category_name && (
+                              <span className="flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                </svg>
+                                {action.category_name}
+                              </span>
                             )}
                           </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center">
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <span>{action.assigned_to_name || 'Niet toegewezen'}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <span>{action.created_by_name}</span>
-                            <span>•</span>
-                            <span>{formatDate(action.created_at)}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {action.assigned_to_name || action.created_by_name}
+                            </span>
+                            <span className="flex items-center">
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {formatTime(action.created_at)}
+                            </span>
                           </div>
                         </div>
                       </div>
