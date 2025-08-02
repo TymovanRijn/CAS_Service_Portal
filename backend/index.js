@@ -149,21 +149,27 @@ app.get('/api/health', (req, res) => {
 
 // Global authentication middleware for all other API routes
 app.use('/api', (req, res, next) => {
+  console.log(`🔍 Middleware check: ${req.method} ${req.path}`);
+  
   // Skip authentication for public routes, health endpoint, and login routes
   if (req.path.startsWith('/public/') || 
       req.path === '/health' ||
       req.path === '/tenant/login' ||
       req.path === '/super-admin/login') {
+    console.log(`✅ Skipping auth for: ${req.path}`);
     return next();
   }
   
+  console.log(`🔒 Requiring auth for: ${req.path}`);
   // Apply authentication for all other API routes
   const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
   
   if (!token) {
+    console.log(`❌ No token provided for: ${req.path}`);
     return res.status(401).json({ message: 'Access denied. No token provided.' });
   }
   
+  console.log(`✅ Token found for: ${req.path}`);
   // Continue with normal authentication
   next();
 });
