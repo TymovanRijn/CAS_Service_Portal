@@ -76,8 +76,13 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Build the React app
-REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-"http://localhost:3001"} npm run build
+# Read backend URL from .env file or use default
+if [ -f .env ]; then
+    export REACT_APP_BACKEND_URL=$(grep "^REACT_APP_BACKEND_URL=" .env | cut -d '=' -f2- | tr -d '"' | tr -d "'")
+fi
+
+# Build the React app with proper backend URL
+REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-"https://sac.cas-nl.com"} npm run build
 
 if [ ! -d "$BUILD_DIR" ]; then
     print_error "Build failed! Build directory not found."
