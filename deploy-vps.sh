@@ -1,86 +1,88 @@
 #!/bin/bash
 
 # CAS Service Portal VPS Deployment Script
-# This script builds and deploys the application specifically for VPS production
+# This script automates the deployment process for the VPS
 
 set -e  # Exit on any error
-
-echo "🚀 Starting CAS Service Portal VPS Deployment..."
-
-# Configuration
-FRONTEND_DIR="./frontend"
-BACKEND_DIR="./backend"
-BUILD_DIR="./frontend/build"
-VPS_WEB_DIR="/var/www/html"
-VPS_API_DIR="/var/www/cas-api"
-SERVICE_NAME="cas-service-portal"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Configuration
+REPO_URL="https://github.com/TymovanRijn/CAS_Service_Portal.git"
+REPO_DIR="/tmp/CAS_Service_Portal"
+BUILD_DIR="/tmp/CAS_Service_Portal/CAS_Service_Portal/frontend/build"
+DEPLOY_DIR="/var/www/html/sac"
+BACKUP_DIR="/var/www/html/sac_backup_$(date +%Y%m%d_%H%M%S)"
+VPS_API_DIR="/var/www/cas-api"
+SERVICE_NAME="cas-service-portal"
+
+echo -e "${BLUE}🚀 CAS Service Portal VPS Deployment Script${NC}"
+echo -e "${BLUE}============================================${NC}"
+echo ""
 
 # Function to print colored output
 print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}✅ $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
 # Check if running as root
-if [[ $EUID -eq 0 ]]; then
-   print_error "This script should not be run as root for security reasons"
+if [[ $EUID -ne 0 ]]; then
+   print_error "This script must be run as root (use sudo)"
    exit 1
 fi
 
-# Check if Node.js is installed
-if ! command -v node &> /dev/null; then
-    print_error "Node.js is not installed. Please install Node.js first."
+# Step 1: Clean up any existing temp directory
+print_info "Cleaning up temporary directory..."
+if [ -d "$REPO_DIR" ]; then
+    sudo rm -rf "$REPO_DIR"
+    print_status "Removed existing temp directory"
+fi
+
+# Step 2: Clone the repository
+print_info "Cloning repository from GitHub..."
+sudo git clone "$REPO_URL" "$REPO_DIR"
+if [ $? -eq 0 ]; then
+    print_status "Repository cloned successfully"
+else
+    print_error "Failed to clone repository"
     exit 1
 fi
 
-# Check if npm is installed
-if ! command -v npm &> /dev/null; then
-    print_error "npm is not installed. Please install npm first."
+# Step 3: Navigate to the project directory
+cd "$REPO_DIR/CAS_Service_Portal"
+
+# Step 4: Install frontend dependencies
+print_info "Installing frontend dependencies..."
+cd frontend
+sudo npm install
+if [ $? -eq 0 ]; then
+    print_status "Frontend dependencies installed"
+else
+    print_error "Failed to install frontend dependencies"
     exit 1
 fi
 
-print_status "Node.js version: $(node --version)"
-print_status "npm version: $(npm --version)"
+# Step 5: Configure frontend for VPS production
+print_info "Configuring frontend for VPS production..."
 
-# Step 1: Install dependencies
-print_status "Installing frontend dependencies..."
-cd "$FRONTEND_DIR"
-npm install
-
-print_status "Installing backend dependencies..."
-cd "../$BACKEND_DIR"
-npm install
-
-# Step 2: Configure frontend for VPS
-print_status "Configuring frontend for VPS production..."
-cd "../$FRONTEND_DIR"
-
-# Create production .env file if it doesn't exist
-if [ ! -f .env ]; then
-    print_warning "No .env file found. Creating VPS production .env..."
-    cat > .env << EOF
-# VPS Production Configuration
-REACT_APP_BACKEND_URL=https://sac.cas-nl.com
-REACT_APP_API_URL=https://sac.cas-nl.com/api
-EOF
-    print_status "Created VPS production .env file"
-fi
-
-# Update .env with VPS settings
-print_status "Updating .env with VPS production settings..."
+# Create VPS production .env file
 cat > .env << EOF
 # VPS Production Configuration
 REACT_APP_BACKEND_URL=https://sac.cas-nl.com
@@ -89,24 +91,51 @@ EOF
 
 print_status "Frontend .env configured for VPS production"
 
-# Step 3: Build frontend for VPS
-print_status "Building frontend for VPS production..."
-
-# Build with VPS backend URL
+# Step 6: Build the frontend with VPS backend URL
+print_info "Building frontend application for VPS..."
 REACT_APP_BACKEND_URL="https://sac.cas-nl.com" \
 REACT_APP_API_URL="https://sac.cas-nl.com/api" \
-npm run build
+sudo npm run build
 
-if [ ! -d "$BUILD_DIR" ]; then
-    print_error "Build failed! Build directory not found."
+if [ $? -eq 0 ]; then
+    print_status "Frontend build completed successfully"
+else
+    print_error "Frontend build failed"
     exit 1
 fi
 
-print_status "Frontend build completed successfully for VPS!"
+# Step 7: Create backup of current deployment
+print_info "Creating backup of current deployment..."
+if [ -d "$DEPLOY_DIR" ]; then
+    sudo mkdir -p "$BACKUP_DIR"
+    sudo cp -r "$DEPLOY_DIR"/* "$BACKUP_DIR/" 2>/dev/null || true
+    print_status "Backup created at: $BACKUP_DIR"
+else
+    print_warning "No existing deployment found, skipping backup"
+fi
 
-# Step 4: Configure backend for VPS
-print_status "Configuring backend for VPS production..."
-cd "../$BACKEND_DIR"
+# Step 8: Deploy the build
+print_info "Deploying build to web directory..."
+sudo mkdir -p "$DEPLOY_DIR"
+sudo rm -rf "$DEPLOY_DIR"/*
+sudo cp -r build/* "$DEPLOY_DIR/"
+sudo chown -R www-data:www-data "$DEPLOY_DIR"
+sudo chmod -R 755 "$DEPLOY_DIR"
+print_status "Build deployed successfully to $DEPLOY_DIR"
+
+# Step 9: Install backend dependencies
+print_info "Installing backend dependencies..."
+cd ../backend
+sudo npm install
+if [ $? -eq 0 ]; then
+    print_status "Backend dependencies installed"
+else
+    print_error "Failed to install backend dependencies"
+    exit 1
+fi
+
+# Step 10: Configure backend for VPS
+print_info "Configuring backend for VPS production..."
 
 # Create backend .env if it doesn't exist
 if [ ! -f .env ]; then
@@ -139,57 +168,18 @@ EOF
     print_warning "Make sure to set:"
     print_warning "  - DB_PASSWORD (secure database password)"
     print_warning "  - JWT_SECRET (secure JWT secret, minimum 32 characters)"
-    exit 1
 fi
 
-# Step 5: Deploy to VPS directories
-print_status "Deploying to VPS directories..."
-
-# Backup existing files
-if [ -d "$VPS_WEB_DIR" ]; then
-    sudo cp -r "$VPS_WEB_DIR" "$VPS_WEB_DIR.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
-fi
-
-# Create web directory if it doesn't exist
-sudo mkdir -p "$VPS_WEB_DIR"
-
-# Copy build files
-sudo cp -r "../$BUILD_DIR"/* "$VPS_WEB_DIR/"
-
-# Set proper permissions
-sudo chown -R www-data:www-data "$VPS_WEB_DIR"
-sudo chmod -R 755 "$VPS_WEB_DIR"
-
-print_status "Frontend deployed to VPS successfully!"
-
-# Step 6: Deploy backend to VPS
-print_status "Deploying backend to VPS..."
-
-# Create API directory
+# Step 11: Deploy backend to VPS
+print_info "Deploying backend to VPS..."
 sudo mkdir -p "$VPS_API_DIR"
-
-# Copy backend files (excluding node_modules)
 sudo rsync -av --exclude='node_modules' --exclude='.git' --exclude='uploads' ./ "$VPS_API_DIR/"
-
-# Install production dependencies
-cd "$VPS_API_DIR"
-sudo npm install --production
-
-# Create uploads directory with proper permissions
-sudo mkdir -p "$VPS_API_DIR/uploads/incidents"
-sudo mkdir -p "$VPS_API_DIR/uploads/reports"
-sudo chown -R www-data:www-data "$VPS_API_DIR/uploads"
-sudo chmod -R 755 "$VPS_API_DIR/uploads"
-
-# Set proper permissions for backend
 sudo chown -R www-data:www-data "$VPS_API_DIR"
 sudo chmod -R 755 "$VPS_API_DIR"
+print_status "Backend deployed to $VPS_API_DIR"
 
-print_status "Backend deployed to VPS successfully!"
-
-# Step 7: Create systemd service
-print_status "Creating systemd service..."
-
+# Step 12: Create systemd service
+print_info "Creating systemd service..."
 sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
 [Unit]
 Description=CAS Service Portal Backend
@@ -213,37 +203,18 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable ${SERVICE_NAME}
 sudo systemctl restart ${SERVICE_NAME}
+print_status "Service created and started"
 
-print_status "Service created and started!"
-
-# Step 8: Configure Nginx
-print_status "Configuring Nginx for VPS..."
-
+# Step 13: Configure Nginx
+print_info "Configuring Nginx for VPS..."
 sudo tee /etc/nginx/sites-available/cas-service-portal > /dev/null <<EOF
 server {
     listen 80;
     server_name sac.cas-nl.com www.sac.cas-nl.com;
     
-    # Redirect HTTP to HTTPS
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name sac.cas-nl.com www.sac.cas-nl.com;
-    
-    # SSL Configuration (adjust paths as needed)
-    ssl_certificate /etc/letsencrypt/live/sac.cas-nl.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/sac.cas-nl.com/privkey.pem;
-    
-    # SSL Security
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    
     # Serve React app
     location / {
-        root $VPS_WEB_DIR;
+        root $DEPLOY_DIR;
         try_files \$uri \$uri/ /index.html;
         
         # Cache static assets
@@ -274,25 +245,69 @@ EOF
 # Enable the site
 sudo ln -sf /etc/nginx/sites-available/cas-service-portal /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
+print_status "Nginx configured successfully"
 
-print_status "Nginx configured successfully for VPS!"
+# Step 14: Database initialization prompt
+echo ""
+print_info "Database initialization options:"
+echo "1. Initialize database with test data"
+echo "2. Initialize database without test data"
+echo "3. Skip database initialization"
+echo ""
+read -p "Choose an option (1-3): " db_choice
 
-# Step 9: Display final status
-print_status "VPS Deployment completed successfully! 🎉"
-print_status ""
-print_status "Your application is now accessible at: https://sac.cas-nl.com"
-print_status "API health check: https://sac.cas-nl.com/api/health"
-print_status ""
-print_status "Next steps:"
-print_status "1. Make sure PostgreSQL is installed and running"
-print_status "2. Create the database and run setup scripts:"
-print_status "   cd $VPS_API_DIR && node scripts/setupDatabase.js"
-print_status "3. Create test users:"
-print_status "   cd $VPS_API_DIR && node scripts/createTestUsers.js"
-print_status "4. Check service status:"
-print_status "   sudo systemctl status ${SERVICE_NAME}"
-print_status "5. View logs:"
-print_status "   sudo journalctl -u ${SERVICE_NAME} -f"
-print_status ""
-print_status "Frontend now points to VPS backend: https://sac.cas-nl.com"
-print_status "No more localhost:3001 issues! 🚀" 
+case $db_choice in
+    1)
+        print_info "Initializing database with test data..."
+        cd "$VPS_API_DIR"
+        sudo node scripts/setupDatabase.js
+        sudo node scripts/createTestUsers.js
+        sudo node scripts/createTestTenant.js
+        sudo node scripts/createTestIncidents.js
+        sudo node scripts/createTestKnowledgeBase.js
+        print_status "Database initialized with test data"
+        ;;
+    2)
+        print_info "Initializing database without test data..."
+        cd "$VPS_API_DIR"
+        sudo node scripts/setupDatabase.js
+        print_status "Database initialized without test data"
+        ;;
+    3)
+        print_warning "Skipping database initialization"
+        ;;
+    *)
+        print_error "Invalid choice, skipping database initialization"
+        ;;
+esac
+
+# Step 15: Clean up
+print_info "Cleaning up temporary files..."
+sudo rm -rf "$REPO_DIR"
+print_status "Temporary files cleaned up"
+
+# Step 16: Final status
+echo ""
+print_status "🎉 VPS Deployment completed successfully!"
+echo ""
+print_info "Deployment Summary:"
+echo "  📁 Web files: $DEPLOY_DIR"
+echo "  🔧 Backend API: $VPS_API_DIR"
+echo "  💾 Backup: $BACKUP_DIR"
+echo "  🗄️  Database: Initialized (if chosen)"
+echo ""
+print_info "Frontend Configuration:"
+echo "  🌐 Backend URL: https://sac.cas-nl.com"
+echo "  🔗 API URL: https://sac.cas-nl.com/api"
+echo "  ✅ No more localhost:3001 issues!"
+echo ""
+print_info "Next steps:"
+echo "  1. Configure your web server (Apache/Nginx) to serve from $DEPLOY_DIR"
+echo "  2. Set up environment variables for the backend"
+echo "  3. Start the backend server"
+echo "  4. Test the application"
+echo ""
+print_info "Backend server can be started with:"
+echo "  cd $VPS_API_DIR && sudo npm start"
+echo ""
+print_status "🚀 CAS Service Portal is ready for VPS production!" 
