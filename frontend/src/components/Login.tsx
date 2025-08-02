@@ -34,7 +34,8 @@ const Login: React.FC = () => {
     setTenantsLoading(true);
     try {
       // Use a public endpoint to get active tenants for login selection
-      const response = await fetch('http://localhost:3001/api/public/tenants');
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://sac.cas-nl.com';
+      const response = await fetch(`${backendUrl}/api/public/tenants`);
       if (response.ok) {
         const data = await response.json();
         setAvailableTenants(data.tenants || []);
