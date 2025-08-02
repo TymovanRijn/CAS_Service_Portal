@@ -6,7 +6,8 @@ const fetch = globalThis.fetch || require('node-fetch');
 class OllamaService {
   constructor() {
     this.config = AI_CONFIG.ollama;
-    this.baseUrl = this.config.baseUrl;
+    // Forceer IPv4: vervang 'localhost' door '127.0.0.1'
+    this.baseUrl = this.config.baseUrl.replace('localhost', '127.0.0.1');
   }
 
   /**
@@ -25,7 +26,7 @@ class OllamaService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: options.model || this.config.model || 'llama3.2:3b',
+          model: options.model || this.config.model || 'qwen2.5:7b',
           prompt: prompt,
           stream: false,
           options: {

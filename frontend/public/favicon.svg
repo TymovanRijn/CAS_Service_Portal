@@ -1,39 +1,14 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Background circle -->
-  <circle cx="256" cy="256" r="240" fill="url(#grad1)" stroke="#1e40af" stroke-width="8"/>
+  <circle cx="16" cy="16" r="16" fill="#3b82f6"/>
   
-  <!-- SecureHub Text -->
-  <text x="256" y="160" font-family="Arial, sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="url(#grad2)">Secure</text>
-  <text x="256" y="200" font-family="Arial, sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="url(#grad2)">Hub</text>
+  <!-- Shield icon -->
+  <path d="M16 4L24 8V14C24 20 20 25 16 28C12 25 8 20 8 14V8L16 4Z" fill="white" stroke="white" stroke-width="1"/>
   
-  <!-- Security Shield -->
-  <path d="M256 340 L320 300 L320 220 L256 180 L192 220 L192 300 Z" fill="url(#grad2)" stroke="#1e40af" stroke-width="4"/>
+  <!-- Security badge -->
+  <circle cx="16" cy="16" r="4" fill="#3b82f6"/>
+  <path d="M14 16L15.5 17.5L18 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   
-  <!-- Shield inner -->
-  <path d="M256 320 L300 290 L300 230 L256 200 L212 230 L212 290 Z" fill="url(#grad1)" stroke="#ffffff" stroke-width="2"/>
-  
-  <!-- Lock icon -->
-  <rect x="240" y="260" width="32" height="24" rx="4" fill="#ffffff"/>
-  <circle cx="256" cy="250" r="8" fill="#ffffff"/>
-  
-  <!-- Hub dots -->
-  <circle cx="180" cy="180" r="8" fill="#ffffff" opacity="0.8"/>
-  <circle cx="332" cy="180" r="8" fill="#ffffff" opacity="0.8"/>
-  <circle cx="180" cy="332" r="8" fill="#ffffff" opacity="0.8"/>
-  <circle cx="332" cy="332" r="8" fill="#ffffff" opacity="0.8"/>
-  
-  <!-- Service lines -->
-  <line x1="200" y1="200" x2="312" y2="312" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
-  <line x1="312" y1="200" x2="200" y2="312" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
+  <!-- CAS text -->
+  <text x="16" y="26" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="6" font-weight="bold">CAS</text>
 </svg> 

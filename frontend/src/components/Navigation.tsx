@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
-import { MobileButton } from './MobileButton';
 
 interface NavigationProps {
   currentPage: string;
@@ -100,6 +99,29 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
         permissions: ['all', 'actions', 'actions:read']
       },
       {
+        id: 'admin',
+        name: 'Admin Management',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        ),
+        description: 'Gebruikers, categorieën en locaties',
+        permissions: ['all']
+      },
+      {
+        id: 'kpi-dashboard',
+        name: 'KPI Dashboard',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+          </svg>
+        ),
+        description: 'Prestatie-indicatoren en analytics',
+        permissions: ['all', 'dashboard:read']
+      },
+      {
         id: 'reports',
         name: 'Rapporten',
         icon: (
@@ -107,203 +129,317 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
         ),
-        description: 'Bekijk rapporten en analytics',
+        description: 'Analyses en rapporten',
         permissions: ['all', 'reports', 'reports:read']
       },
       {
-        id: 'admin',
-        name: 'Beheer',
+        id: 'ai-insights',
+        name: 'AI Insights',
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
         ),
-        description: 'Beheer gebruikers en instellingen',
-        permissions: ['all', 'admin', 'admin:read']
+        description: 'AI-gegenereerde inzichten',
+        permissions: ['all', 'dashboard:read', 'ai:read']
       }
     ];
 
     return allItems.filter(item => hasPermission(item.permissions));
   };
 
+  const navigationItems = getNavigationItems();
+
   const getRoleColor = (role: string) => {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return 'text-red-600 bg-red-50 border-red-200';
-      case 'sac':
-        return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'security officer':
-        return 'text-green-600 bg-green-50 border-green-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+    switch (role) {
+      case 'Admin': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Security Officer': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Dashboard Viewer': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const navigationItems = getNavigationItems();
-
   return (
     <>
-      {/* Desktop Navigation */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:border-r lg:border-gray-200 lg:pt-5 lg:pb-4 lg:flex lg:flex-col lg:justify-between">
-        {/* Logo and Brand */}
-        <div className="flex items-center flex-shrink-0 px-6 mb-8">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h1 className="text-xl font-bold text-gray-900">SecureHub</h1>
-              <p className="text-sm text-gray-500">Security Portal</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Items */}
-        <nav className="flex-1 px-6 space-y-2">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handlePageChange(item.id)}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                currentPage === item.id
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <span className="mr-3">{item.icon}</span>
-              {item.name}
-            </button>
-          ))}
-        </nav>
-
-        {/* User Info */}
-        <div className="px-6 py-4 border-t border-gray-200">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-blue-600">
-                  {user.username.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            </div>
-            <div className="ml-3 flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user.username}</p>
-              <p className="text-xs text-gray-500 truncate">{user.role_name}</p>
-            </div>
-            <button
-              onClick={logout}
-              className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="flex justify-around items-center h-16 px-4">
-          {navigationItems.slice(0, 4).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handlePageChange(item.id)}
-              className={`flex flex-col items-center justify-center flex-1 h-full min-w-0 transition-colors duration-200 ${
-                currentPage === item.id
-                  ? 'text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <div className="mb-1">{item.icon}</div>
-              <span className="text-xs font-medium truncate">{item.name}</span>
-            </button>
-          ))}
-          
-          {/* More menu for additional items */}
-          {navigationItems.length > 4 && (
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="flex flex-col items-center justify-center flex-1 h-full min-w-0 text-gray-500 hover:text-gray-700 transition-colors duration-200"
-            >
-              <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              <span className="text-xs font-medium">Meer</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile Sidebar for additional items */}
-      {isSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setIsSidebarOpen(false)} />
-          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-white shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4 space-y-2">
-              {navigationItems.slice(4).map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    handlePageChange(item.id);
-                    setIsSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    currentPage === item.id
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <span className="mr-3">{item.icon}</span>
-                  {item.name}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Mobile menu button - Only show when sidebar is closed */}
+      {isSidebarOpen ? null : (
+        <div className="lg:hidden fixed top-4 left-4 z-50 safe-area-top">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSidebarOpen(true)}
+            className="bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation min-w-[48px] min-h-[48px] p-3 border-2 border-gray-200 hover:border-gray-300"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </Button>
         </div>
       )}
 
-      {/* Mobile Top Bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-40">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center">
-            <svg className="h-6 w-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            <h1 className="text-lg font-bold text-gray-900">SecureHub</h1>
+      {/* Desktop Sidebar - Unchanged but with better transitions */}
+      <div className={`hidden lg:flex fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out shadow-sm ${
+        isCollapsed ? 'w-16' : 'w-64'
+      }`}>
+        <div className="flex flex-col h-full w-full">
+          {/* Header */}
+          <div className="p-3 border-b border-gray-200">
+            <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
+              {currentTenant?.settings?.logoPath ? (
+                <img
+                  src={`${process.env.REACT_APP_BACKEND_URL || 'https://sac.cas-nl.com'}/${currentTenant.settings.logoPath}`}
+                  alt={`${currentTenant.name} logo`}
+                  className="w-8 h-8 rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <div 
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-bold text-sm"
+                  style={{ backgroundColor: currentTenant?.settings?.primaryColor || '#3B82F6' }}
+                >
+                  {currentTenant?.name?.charAt(0) || 'C'}
+                </div>
+              )}
+              <div className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                <h1 className="text-sm font-bold leading-tight" title={currentTenant?.name || 'CAS Portal'}>
+                  {currentTenant?.name || 'CAS Portal'}
+                </h1>
+                <p className="text-xs text-gray-500 leading-tight">Incident & Action Management</p>
+              </div>
+            </div>
+            
+            {/* Collapse Toggle Button - Always below logo */}
+            <div className="flex justify-center mt-3">
+              <div className="relative group">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleCollapse}
+                  className="w-8 h-8 p-0 rounded-lg transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md text-gray-600 hover:scale-105 active:scale-95 border border-transparent hover:border-blue-200"
+                  title={isCollapsed ? 'Menu uitklappen' : 'Menu inklappen'}
+                >
+                  <svg className={`w-4 h-4 transition-all duration-300 ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                  </svg>
+                </Button>
+                
+                {/* Enhanced Tooltip for collapsed state */}
+                {isCollapsed && (
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out whitespace-nowrap z-50 shadow-xl pointer-events-none">
+                    Menu uitklappen
+                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getRoleColor(user.role_name || 'User')}`}>
-              {user.role_name || 'User'}
-            </span>
-            <button
-              onClick={logout}
-              className="p-2 text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
+
+          {/* User Info */}
+          <div className="p-4 border-b border-gray-200">
+            <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
+              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className={`flex-1 min-w-0 transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                <p className="text-sm font-medium text-gray-900 truncate">{user.username}</p>
+                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                {user.role_name && (
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border mt-1 ${getRoleColor(user.role_name)}`}>
+                    {user.role_name}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className={`flex-1 p-4 transition-all duration-300 ${isCollapsed ? 'space-y-1 overflow-hidden' : 'space-y-2 overflow-y-auto'}`}>
+            <div className={`mb-4 transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mb-0' : 'opacity-100'}`}>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Navigatie</h3>
+            </div>
+            {navigationItems.map((item) => (
+              <div key={item.id} className="relative group">
+                <button
+                  onClick={() => handlePageChange(item.id)}
+                  className={`w-full flex items-center rounded-lg text-left transition-all duration-200 hover:scale-[1.02] ${
+                    currentPage === item.id
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  } ${isCollapsed ? 'justify-center p-3 h-12' : 'space-x-3 px-3 py-3'}`}
+                >
+                  <span className={`flex-shrink-0 ${currentPage === item.id ? 'text-primary-foreground' : 'text-gray-500'}`}>
+                    {item.icon}
+                  </span>
+                  <div className={`flex-1 min-w-0 transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    <p className={`text-xs truncate ${
+                      currentPage === item.id ? 'text-primary-foreground/80' : 'text-gray-500'
+                    }`}>
+                      {item.description}
+                    </p>
+                  </div>
+                </button>
+                
+                {/* Tooltip for collapsed state */}
+                {isCollapsed && (
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-3 py-2 bg-white border border-gray-200 text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out whitespace-nowrap z-50 shadow-xl pointer-events-none">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900">{item.name}</span>
+                      <span className="text-xs text-gray-600">{item.description}</span>
+                    </div>
+                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-white border-l border-b border-gray-200 rotate-45"></div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </nav>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="relative group">
+              <Button
+                variant="outline"
+                onClick={logout}
+                className={`w-full transition-all duration-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 ${isCollapsed ? 'px-0 justify-center' : 'justify-start'}`}
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden ml-0' : 'opacity-100 ml-2'}`}>
+                  Uitloggen
+                </span>
+              </Button>
+              
+              {/* Tooltip for collapsed logout button */}
+              {isCollapsed && (
+                <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-3 py-2 bg-white border border-gray-200 text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out whitespace-nowrap z-50 shadow-xl pointer-events-none">
+                  Uitloggen
+                  <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-white border-l border-b border-gray-200 rotate-45"></div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Content padding for mobile */}
-      <div className="lg:hidden pt-16 pb-20" />
+      {/* Mobile Sidebar - Enhanced with better touch experience and safe areas */}
+      <div className={`lg:hidden fixed inset-y-0 left-0 z-40 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out shadow-2xl ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full safe-area-left safe-area-right">
+          {/* Mobile Header - Enhanced with safe areas */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 safe-area-top">
+            <div className="flex items-center space-x-4">
+              {currentTenant?.settings?.logoPath ? (
+                <img
+                  src={`${process.env.REACT_APP_BACKEND_URL || 'https://sac.cas-nl.com'}/${currentTenant.settings.logoPath}`}
+                  alt={`${currentTenant.name} logo`}
+                  className="w-12 h-12 rounded-lg object-cover shadow-sm"
+                />
+              ) : (
+                <div 
+                  className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm"
+                  style={{ backgroundColor: currentTenant?.settings?.primaryColor || '#3B82F6' }}
+                >
+                  {currentTenant?.name?.charAt(0) || 'C'}
+                </div>
+              )}
+              <div>
+                <h1 className="text-lg font-bold leading-tight text-gray-900" title={currentTenant?.name || 'CAS Portal'}>
+                  {currentTenant?.name || 'CAS Portal'}
+                </h1>
+                <p className="text-sm text-gray-600">Incident & Action Management</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSidebarOpen(false)}
+              className="touch-manipulation min-w-[48px] min-h-[48px] p-3 hover:bg-gray-200 rounded-full"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </Button>
+          </div>
+
+          {/* Mobile User Info - Enhanced */}
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center space-x-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center shadow-sm">
+                <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-lg font-semibold text-gray-900 truncate">{user.username}</p>
+                <p className="text-sm text-gray-600 truncate">{user.email}</p>
+                {user.role_name && (
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border mt-3 ${getRoleColor(user.role_name)}`}>
+                    {user.role_name}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Navigation - Enhanced touch targets with better spacing */}
+          <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Navigatie</h3>
+            </div>
+            {navigationItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handlePageChange(item.id)}
+                className={`w-full flex items-center space-x-4 px-5 py-5 rounded-2xl text-left transition-all duration-200 touch-manipulation active:scale-95 min-h-[64px] ${
+                  currentPage === item.id
+                    ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
+                    : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+                }`}
+              >
+                <span className={`flex-shrink-0 ${currentPage === item.id ? 'text-primary-foreground' : 'text-gray-500'}`}>
+                  {item.icon}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium truncate">{item.name}</p>
+                  <p className={`text-sm truncate ${
+                    currentPage === item.id ? 'text-primary-foreground/80' : 'text-gray-500'
+                  }`}>
+                    {item.description}
+                  </p>
+                </div>
+                {currentPage === item.id && (
+                  <div className="w-3 h-3 bg-primary-foreground rounded-full flex-shrink-0"></div>
+                )}
+              </button>
+            ))}
+          </nav>
+
+          {/* Mobile Footer - Enhanced with safe areas */}
+          <div className="p-6 border-t border-gray-200 bg-gray-50 safe-area-bottom">
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="w-full justify-start py-4 text-base font-medium hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-200 touch-manipulation active:scale-95 min-h-[56px] rounded-xl"
+            >
+              <svg className="w-6 h-6 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Uitloggen
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Overlay for mobile with backdrop blur */}
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-all duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
     </>
   );
 }; 

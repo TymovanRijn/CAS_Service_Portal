@@ -7,19 +7,19 @@
     <meta name="theme-color" content="#3b82f6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="SecureHub" />
+    <meta name="apple-mobile-web-app-title" content="CAS Portal" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-TileColor" content="#3b82f6" />
     <meta name="msapplication-tap-highlight" content="no" />
-    <meta name="application-name" content="SecureHub" />
-    <meta name="msapplication-tooltip" content="SecureHub Service Portal" />
+    <meta name="application-name" content="CAS Portal" />
+    <meta name="msapplication-tooltip" content="CAS Service Portal" />
     <meta name="msapplication-starturl" content="/" />
     <meta name="msapplication-navbutton-color" content="#3b82f6" />
     <meta name="msapplication-TileImage" content="%PUBLIC_URL%/logo192.png" />
     <meta
       name="description"
-      content="SecureHub - Modern incident management and service portal for security organizations"
+      content="CAS Service Portal - Modern incident management and service portal for CAS organizations"
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/logo192.png" />
@@ -43,7 +43,7 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>SecureHub - Incident Management</title>
+    <title>CAS Portal - Incident Management</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -100,43 +100,50 @@
             event.preventDefault();
           }
         }, { passive: false });
-
-        // Prevent double-tap zoom on mobile
-        document.addEventListener('touchend', function (event) {
-          const now = (new Date()).getTime();
-          if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-          }
-          lastTouchEnd = now;
-        }, false);
-      } else {
-        // Production mode - Register service worker
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-              .then((registration) => {
-                console.log('✅ Service Worker registered successfully:', registration.scope);
-              })
-              .catch((error) => {
-                console.log('❌ Service Worker registration failed:', error);
+        
+        return; // Exit early, no service worker registration
+      }
+      
+      // PRODUCTION ONLY: Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          console.log('🚀 Production Mode: Registering service worker');
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('✅ SW registered successfully:', registration);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🔄 New content available, refreshing...');
+                    window.location.reload();
+                  }
+                });
               });
-          });
-        }
+            })
+            .catch((registrationError) => {
+              console.log('❌ SW registration failed:', registrationError);
+            });
+        });
       }
 
-      // Mobile-specific optimizations
-      // Prevent zoom on input focus (iOS)
-      const inputs = document.querySelectorAll('input, textarea, select');
-      inputs.forEach(input => {
-        input.addEventListener('focus', () => {
-          input.style.fontSize = '16px';
-        });
-      });
+      // Production mobile optimizations
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function (event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+          event.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
 
-      // Better touch handling
-      document.addEventListener('touchstart', function() {}, {passive: true});
-      document.addEventListener('touchmove', function() {}, {passive: true});
-      document.addEventListener('touchend', function() {}, {passive: true});
+      document.addEventListener('touchmove', function (event) {
+        if (event.scale !== 1) {
+          event.preventDefault();
+        }
+      }, { passive: false });
     </script>
   </body>
 </html>

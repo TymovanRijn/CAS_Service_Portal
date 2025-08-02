@@ -1,24 +1,12 @@
 {
   "short_name": "SecureHub",
   "name": "SecureHub - Incident Management",
-  "description": "Modern incident management and service portal for security organizations",
+  "description": "Modern incident management and service portal",
   "icons": [
     {
       "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "favicon-16x16.png",
-      "type": "image/png",
-      "sizes": "16x16",
-      "purpose": "any"
-    },
-    {
-      "src": "favicon-32x32.png",
-      "type": "image/png",
-      "sizes": "32x32",
       "purpose": "any"
     },
     {
@@ -98,11 +86,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "SecureHub Dashboard"
+      "label": "CAS Service Portal Dashboard"
     }
-  ],
-  "prefer_related_applications": false,
-  "edge_side_panel": {
-    "preferred_width": 400
-  }
+  ]
 }
