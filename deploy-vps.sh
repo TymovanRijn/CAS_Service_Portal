@@ -173,7 +173,16 @@ fi
 # Step 11: Deploy backend to VPS
 print_info "Deploying backend to VPS..."
 sudo mkdir -p "$VPS_API_DIR"
-sudo rsync -av --exclude='node_modules' --exclude='.git' --exclude='uploads' ./ "$VPS_API_DIR/"
+
+# Use cp instead of rsync if rsync is not available
+if command -v rsync &> /dev/null; then
+    sudo rsync -av --exclude='node_modules' --exclude='.git' --exclude='uploads' ./ "$VPS_API_DIR/"
+else
+    print_warning "rsync not found, using cp instead..."
+    sudo cp -r . "$VPS_API_DIR/"
+    sudo rm -rf "$VPS_API_DIR/node_modules" "$VPS_API_DIR/.git" "$VPS_API_DIR/uploads" 2>/dev/null || true
+fi
+
 sudo chown -R www-data:www-data "$VPS_API_DIR"
 sudo chmod -R 755 "$VPS_API_DIR"
 print_status "Backend deployed to $VPS_API_DIR"
