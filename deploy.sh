@@ -76,15 +76,10 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Read backend URL from .env file or use default
-if [ -f .env ]; then
-    export REACT_APP_BACKEND_URL=$(grep "^REACT_APP_BACKEND_URL=" .env | cut -d '=' -f2- | tr -d '"' | tr -d "'")
-fi
-
-# Build the React app with proper backend URL
+# Build the React app
 REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-"https://sac.cas-nl.com"} npm run build
 
-if [ ! -d "$BUILD_DIR" ]; then
+if [ ! -d "build" ]; then
     print_error "Build failed! Build directory not found."
     exit 1
 fi
@@ -117,7 +112,7 @@ fi
 sudo mkdir -p "$VPS_WEB_DIR"
 
 # Copy build files
-sudo cp -r "../$BUILD_DIR"/* "$VPS_WEB_DIR/"
+sudo cp -r "build"/* "$VPS_WEB_DIR/"
 
 # Set proper permissions
 sudo chown -R www-data:www-data "$VPS_WEB_DIR"
