@@ -12,7 +12,6 @@ const knowledgeBaseRoutes = require('./routes/knowledgeBase');
 const superAdminRoutes = require('./routes/superAdmin');
 const tenantAuthRoutes = require('./routes/tenantAuth');
 const publicRoutes = require('./routes/public');
-const kpiRoutes = require('./routes/kpi');
 const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
@@ -179,7 +178,6 @@ app.use('/api/admin', userRoutes);
 app.use('/api/knowledge-base', knowledgeBaseRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/locations', locationRoutes);
-app.use('/api/kpi', kpiRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

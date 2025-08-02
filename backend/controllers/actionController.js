@@ -585,58 +585,47 @@ const updateActionStatus = async (req, res) => {
 
 // Get action statistics (tenant-aware)
 const getActionStats = async (req, res) => {
-  let client;
   try {
     if (!req.tenant) {
       return res.status(400).json({ message: 'Tenant context required' });
     }
 
-    console.log('Getting action stats for tenant:', req.tenant.schema);
-    console.log('User ID:', req.user.userId);
+    const client = await getTenantConnection(req.tenant.schema);
+    
+    // Get various statistics
+    const pendingStats = await client.query(`
+      SELECT COUNT(*) as count FROM actions 
+      WHERE status = 'Pending'
+    `);
+    
+    const inProgressStats = await client.query(`
+      SELECT COUNT(*) as count FROM actions 
+      WHERE status = 'In Progress'
+    `);
+    
 
-    client = await getTenantConnection(req.tenant.schema);
     
-    // Single query to get all stats at once
-    console.log('Executing combined stats query...');
-    const statsQuery = `
-      SELECT 
-        COUNT(*) FILTER (WHERE status = 'Pending') as pending_count,
-        COUNT(*) FILTER (WHERE status = 'In Progress') as in_progress_count,
-        COUNT(*) FILTER (WHERE status = 'Completed' AND DATE(updated_at) = CURRENT_DATE) as completed_today_count,
-        COUNT(*) FILTER (WHERE assigned_to = $1 AND status IN ('Pending', 'In Progress')) as my_actions_count
-      FROM actions
-    `;
+    const myActionsStats = await client.query(`
+      SELECT COUNT(*) as count FROM actions 
+      WHERE assigned_to = $1 AND status IN ('Pending', 'In Progress')
+    `, [req.user.userId]);
     
-    const statsResult = await client.query(statsQuery, [req.user.userId]);
-    console.log('Stats result:', statsResult.rows[0]);
+    client.release();
     
-    const result = {
-      pendingActions: parseInt(statsResult.rows[0].pending_count) || 0,
-      inProgressActions: parseInt(statsResult.rows[0].in_progress_count) || 0,
-      completedToday: parseInt(statsResult.rows[0].completed_today_count) || 0,
-      myActions: parseInt(statsResult.rows[0].my_actions_count) || 0
-    };
+    const completedTodayStats = await client.query(`
+      SELECT COUNT(*) as count FROM actions 
+      WHERE status = 'Completed' AND DATE(updated_at) = CURRENT_DATE
+    `);
     
-    console.log('Final result:', result);
-    
-    if (client) {
-      client.release();
-    }
-    
-    res.json(result);
+    res.json({
+      pendingActions: parseInt(pendingStats.rows[0].count),
+      inProgressActions: parseInt(inProgressStats.rows[0].count),
+      completedToday: parseInt(completedTodayStats.rows[0].count),
+      myActions: parseInt(myActionsStats.rows[0].count)
+    });
   } catch (err) {
     console.error('Error fetching action stats:', err);
-    console.error('Error stack:', err.stack);
-    
-    if (client) {
-      client.release();
-    }
-    
-    res.status(500).json({ 
-      message: 'Error fetching statistics',
-      error: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
+    res.status(500).json({ message: 'Error fetching statistics' });
   }
 };
 
