@@ -392,8 +392,8 @@ const getCategoryStats = async (req, res) => {
         c.description,
         c.color,
         COUNT(i.id) as incident_count,
-        COUNT(CASE WHEN i.status = 'Open' THEN 1 END) as open_incidents,
-        COUNT(CASE WHEN i.status = 'Closed' THEN 1 END) as closed_incidents
+        COUNT(CASE WHEN i.priority = 'High' THEN 1 END) as high_priority_incidents,
+        COUNT(CASE WHEN i.priority = 'Medium' THEN 1 END) as medium_priority_incidents
       FROM categories c
       LEFT JOIN incidents i ON c.id = i.category_id
       GROUP BY c.id, c.name, c.description, c.color

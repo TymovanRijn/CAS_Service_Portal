@@ -73,7 +73,7 @@ const getArchivedIncidents = async (req, res) => {
     
     // Build dynamic WHERE clause
     if (status) {
-      whereConditions.push(`i.status = $${paramIndex}`);
+      whereConditions.push(`i.priority = $${paramIndex}`);
       queryParams.push(status);
       paramIndex++;
     }
