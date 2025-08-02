@@ -214,9 +214,16 @@ sudo systemctl enable ${SERVICE_NAME}
 sudo systemctl restart ${SERVICE_NAME}
 print_status "Service created and started"
 
-# Step 13: Configure Nginx
-print_info "Configuring Nginx for VPS..."
-sudo tee /etc/nginx/sites-available/cas-service-portal > /dev/null <<EOF
+# Step 13: Configure Nginx (if available)
+print_info "Checking Nginx availability..."
+if command -v nginx &> /dev/null; then
+    print_info "Configuring Nginx for VPS..."
+    
+    # Create nginx directories if they don't exist
+    sudo mkdir -p /etc/nginx/sites-available
+    sudo mkdir -p /etc/nginx/sites-enabled
+    
+    sudo tee /etc/nginx/sites-available/cas-service-portal > /dev/null <<EOF
 server {
     listen 80;
     server_name sac.cas-nl.com www.sac.cas-nl.com;
@@ -251,10 +258,15 @@ server {
 }
 EOF
 
-# Enable the site
-sudo ln -sf /etc/nginx/sites-available/cas-service-portal /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-print_status "Nginx configured successfully"
+    # Enable the site
+    sudo ln -sf /etc/nginx/sites-available/cas-service-portal /etc/nginx/sites-enabled/
+    sudo nginx -t && sudo systemctl reload nginx
+    print_status "Nginx configured successfully"
+else
+    print_warning "Nginx not found. You'll need to configure your web server manually."
+    print_warning "Frontend files are deployed to: $DEPLOY_DIR"
+    print_warning "Backend API is running on: http://localhost:3001"
+fi
 
 # Step 14: Database initialization prompt
 echo ""
