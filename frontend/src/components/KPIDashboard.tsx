@@ -1,264 +1,99 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ComposedChart
+} from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { api } from '../lib/api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-
-interface KPIMetrics {
-  // Real incident data we actually have
+interface KPIData {
   totalIncidents: number;
-  openIncidents: number;
-  inProgressIncidents: number;
-  todayIncidents: number;
-  thisWeekIncidents: number;
-  thisMonthIncidents: number;
-  
-  // Priority distribution (real data)
-  highPriorityIncidents: number;
-  mediumPriorityIncidents: number;
-  lowPriorityIncidents: number;
-  
-  // Action data (real when actions exist)
   totalActions: number;
-  pendingActions: number;
-  completedActions: number;
-  inProgressActions: number;
-  
-  // Security Officer KPI data (only what Security Officers actually input)
-  unregisteredIncidents: number;
-  incidentsRequiringEscalation: number;
-  securityResolvedIncidents: number;
-  incorrectDiagnosis: number;
-  incorrectServiceParty: number;
-  lateServiceParty: number;
-  multipleServiceParties: number;
+  sacActivities: { activity: string; count: number }[];
+  actionsByStatus: { status: string; count: number }[];
+  incidentsByPriority: { priority: string; count: number }[];
+  incidentsByCategory: { category: string; count: number }[];
+  incidentsByLocation: { location: string; count: number }[];
+  sacPerformance: {
+    totalActions: number;
+    completedActions: number;
+    completionRate: string;
+    avgCompletionHours: string;
+    highPriorityActions: number;
+  };
+  incidentsByMonth: { month: string; count: number }[];
+  actionsByMonth: { month: string; count: number }[];
 }
 
-interface LocationMetrics {
-  location: string;
-  incidents: number;
-  openIncidents: number;
+interface TimeRange {
+  label: string;
+  value: string;
+  days: number;
 }
 
-interface CategoryMetrics {
-  category: string;
-  incidents: number;
-  openIncidents: number;
-  highPriority: number;
-}
+const COLORS = {
+  primary: '#3B82F6',
+  secondary: '#10B981',
+  accent: '#F59E0B',
+  danger: '#EF4444',
+  warning: '#F97316',
+  success: '#22C55E',
+  info: '#06B6D4',
+  purple: '#8B5CF6',
+  pink: '#EC4899',
+  gray: '#6B7280'
+};
+
+const CHART_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+  '#06B6D4', '#F97316', '#EC4899', '#22C55E', '#6B7280'
+];
 
 export const KPIDashboard: React.FC = () => {
-  const [metrics, setMetrics] = useState<KPIMetrics | null>(null);
-  const [locationMetrics, setLocationMetrics] = useState<LocationMetrics[]>([]);
-  const [categoryMetrics, setCategoryMetrics] = useState<CategoryMetrics[]>([]);
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter'>('week');
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>({
+    label: 'Laatste 30 dagen',
+    value: '30',
+    days: 30
+  });
 
-  useEffect(() => {
-    fetchKPIData();
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(fetchKPIData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [selectedPeriod]);
+  const timeRanges: TimeRange[] = [
+    { label: 'Vandaag', value: '1', days: 1 },
+    { label: 'Laatste 7 dagen', value: '7', days: 7 },
+    { label: 'Laatste 30 dagen', value: '30', days: 30 },
+    { label: 'Laatste 90 dagen', value: '90', days: 90 },
+    { label: 'Dit jaar', value: '365', days: 365 }
+  ];
 
   const fetchKPIData = async () => {
     try {
       setIsLoading(true);
       setError('');
-
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      // Get real data from our endpoints
-      const [
-        incidentStatsRes,
-        actionStatsRes,
-        incidentsRes
-      ] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/incidents/stats`, { headers, credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/actions/stats`, { headers, credentials: 'include' }),
-        fetch(`${BACKEND_URL}/api/incidents/archive?limit=1000`, { headers, credentials: 'include' })
-      ]);
-
-      let calculatedMetrics: KPIMetrics = {
-        totalIncidents: 0,
-        openIncidents: 0,
-        inProgressIncidents: 0,
-        todayIncidents: 0,
-        thisWeekIncidents: 0,
-        thisMonthIncidents: 0,
-        highPriorityIncidents: 0,
-        mediumPriorityIncidents: 0,
-        lowPriorityIncidents: 0,
-        totalActions: 0,
-        pendingActions: 0,
-        completedActions: 0,
-        inProgressActions: 0,
-        unregisteredIncidents: 0,
-        incidentsRequiringEscalation: 0,
-        securityResolvedIncidents: 0,
-        incorrectDiagnosis: 0,
-        incorrectServiceParty: 0,
-        lateServiceParty: 0,
-        multipleServiceParties: 0
-      };
-
-      // Process incident stats (real backend data)
-      if (incidentStatsRes.ok) {
-        const incidentStats = await incidentStatsRes.json();
-        calculatedMetrics.todayIncidents = incidentStats.todayIncidents || 0;
-        calculatedMetrics.openIncidents = incidentStats.openIncidents || 0;
-        calculatedMetrics.inProgressIncidents = incidentStats.inProgressIncidents || 0;
-        
-        // Security Officer KPI data (always show, even if 0)
-        calculatedMetrics.unregisteredIncidents = incidentStats.unregisteredIncidents || 0;
-        calculatedMetrics.incidentsRequiringEscalation = incidentStats.incidentsRequiringEscalation || 0;
-        calculatedMetrics.securityResolvedIncidents = incidentStats.securityResolvedIncidents || 0;
-        calculatedMetrics.incorrectDiagnosis = incidentStats.incorrectDiagnosis || 0;
-        calculatedMetrics.incorrectServiceParty = incidentStats.incorrectServiceParty || 0;
-        calculatedMetrics.lateServiceParty = incidentStats.lateServiceParty || 0;
-        calculatedMetrics.multipleServiceParties = incidentStats.multipleServiceParties || 0;
-      }
-
-      // Process action stats (real data when actions exist)
-      if (actionStatsRes.ok) {
-        const actionStats = await actionStatsRes.json();
-        calculatedMetrics.pendingActions = actionStats.pendingActions || 0;
-        calculatedMetrics.completedActions = actionStats.completedToday || 0;
-        calculatedMetrics.inProgressActions = actionStats.inProgressActions || 0;
-        calculatedMetrics.totalActions = calculatedMetrics.pendingActions + calculatedMetrics.completedActions + calculatedMetrics.inProgressActions;
-      }
-
-      // Process detailed incident data for analysis
-      if (incidentsRes.ok) {
-        const incidentsData = await incidentsRes.json();
-        const incidents = incidentsData.incidents || [];
-        
-        // Filter incidents based on selected period
-        const now = new Date();
-        let periodStart: Date;
-        
-        switch (selectedPeriod) {
-          case 'week':
-            periodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            break;
-          case 'month':
-            periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            break;
-          case 'quarter':
-            periodStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-            break;
-        }
-        
-        const filteredIncidents = incidents.filter((i: any) => 
-          new Date(i.created_at) >= periodStart
-        );
-        
-        // Use filtered incidents for period-specific metrics
-        calculatedMetrics.totalIncidents = filteredIncidents.length;
-        calculatedMetrics.highPriorityIncidents = filteredIncidents.filter((i: any) => i.priority === 'High').length;
-        calculatedMetrics.mediumPriorityIncidents = filteredIncidents.filter((i: any) => i.priority === 'Medium').length;
-        calculatedMetrics.lowPriorityIncidents = filteredIncidents.filter((i: any) => i.priority === 'Low').length;
-        
-        // Calculate time-based counts
-        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        
-        calculatedMetrics.thisWeekIncidents = incidents.filter((i: any) => 
-          new Date(i.created_at) >= oneWeekAgo
-        ).length;
-        
-        calculatedMetrics.thisMonthIncidents = incidents.filter((i: any) => 
-          new Date(i.created_at) >= oneMonthAgo
-        ).length;
-        
-        // Real location metrics (use filtered data)
-        const locationCounts: { [key: string]: { total: number; open: number } } = {};
-        filteredIncidents.forEach((incident: any) => {
-          const location = incident.location_name || 'Onbekend';
-          if (!locationCounts[location]) {
-            locationCounts[location] = { total: 0, open: 0 };
-          }
-          locationCounts[location].total++;
-          if (incident.status === 'Open' || incident.status === 'In Progress') {
-            locationCounts[location].open++;
-          }
-        });
-        
-        const locationMetricsArray = Object.entries(locationCounts).map(([location, data]) => ({
-          location,
-          incidents: data.total,
-          openIncidents: data.open
-        }));
-        setLocationMetrics(locationMetricsArray);
-        
-        // Real category metrics (use filtered data)
-        const categoryCounts: { [key: string]: { total: number; open: number; high: number } } = {};
-        filteredIncidents.forEach((incident: any) => {
-          const category = incident.category_name || 'Onbekend';
-          if (!categoryCounts[category]) {
-            categoryCounts[category] = { total: 0, open: 0, high: 0 };
-          }
-          categoryCounts[category].total++;
-          if (incident.status === 'Open' || incident.status === 'In Progress') {
-            categoryCounts[category].open++;
-          }
-          if (incident.priority === 'High') {
-            categoryCounts[category].high++;
-          }
-        });
-        
-        const categoryMetricsArray = Object.entries(categoryCounts).map(([category, data]) => ({
-          category,
-          incidents: data.total,
-          openIncidents: data.open,
-          highPriority: data.high
-        }));
-        setCategoryMetrics(categoryMetricsArray);
-      }
-
-      setMetrics(calculatedMetrics);
-      setLastUpdated(new Date());
+      
+      const data = await api.get(`/api/kpi/dashboard?days=${selectedTimeRange.days}`);
+      setKpiData(data);
     } catch (err) {
       console.error('Error fetching KPI data:', err);
-      setError('Fout bij laden van KPI gegevens');
+      setError('Fout bij het laden van KPI data');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const formatNumber = (num: number): string => {
-    return new Intl.NumberFormat('nl-NL').format(Math.round(num));
-  };
-
-  const formatPercentage = (total: number, part: number): string => {
-    if (total === 0) return '0%';
-    return `${Math.round((part / total) * 100)}%`;
-  };
-
-  const getPeriodLabel = () => {
-    switch (selectedPeriod) {
-      case 'week': return 'Deze Week';
-      case 'month': return 'Deze Maand';
-      case 'quarter': return 'Dit Kwartaal';
-    }
-  };
+  useEffect(() => {
+    fetchKPIData();
+  }, [selectedTimeRange]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">KPI Dashboard laden...</p>
         </div>
       </div>
     );
@@ -266,11 +101,12 @@ export const KPIDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-64">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 mb-2">⚠️</div>
-          <p className="text-gray-600">{error}</p>
-          <Button onClick={fetchKPIData} className="mt-4">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Fout bij laden</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={fetchKPIData} className="bg-blue-600 hover:bg-blue-700">
             Opnieuw proberen
           </Button>
         </div>
@@ -278,349 +114,311 @@ export const KPIDashboard: React.FC = () => {
     );
   }
 
+  if (!kpiData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-400 text-6xl mb-4">📊</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Geen data beschikbaar</h2>
+          <p className="text-gray-600">Er is nog geen KPI data beschikbaar</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">📊 KPI Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overzicht van incidenten en acties - {getPeriodLabel().toLowerCase()}
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex gap-2">
-            {['week', 'month', 'quarter'].map((period) => (
-              <Button
-                key={period}
-                variant={selectedPeriod === period ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedPeriod(period as any)}
-              >
-                {period === 'week' ? 'Week' :
-                 period === 'month' ? 'Maand' : 'Kwartaal'}
-              </Button>
-            ))}
-          </div>
-          <Button onClick={fetchKPIData} variant="outline" size="sm">
-            🔄 Vernieuwen
-          </Button>
-        </div>
-      </div>
-
-      {/* Last Updated */}
-      <div className="text-sm text-muted-foreground">
-        Laatst bijgewerkt: {lastUpdated.toLocaleTimeString('nl-NL')} • Filter: {getPeriodLabel()}
-      </div>
-
-      {/* Main Metrics Cards */}
-      {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Incidenten {getPeriodLabel()}</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatNumber(metrics.totalIncidents)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Deze maand: {formatNumber(metrics.thisMonthIncidents)}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  📋
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Openstaand</p>
-                  <p className="text-2xl font-bold text-red-600">{formatNumber(metrics.openIncidents)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    In behandeling: {formatNumber(metrics.inProgressIncidents)}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  🚨
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Hoge Prioriteit</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatNumber(metrics.highPriorityIncidents)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {formatPercentage(metrics.totalIncidents, metrics.highPriorityIncidents)} van {getPeriodLabel().toLowerCase()}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  ⚡
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Acties Totaal</p>
-                  <p className="text-2xl font-bold text-green-600">{formatNumber(metrics.totalActions)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {metrics.totalActions === 0 ? 'Nog geen acties' : `${formatNumber(metrics.pendingActions)} openstaand`}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  ⚙️
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Action Status Overview - Only show if actions exist */}
-      {metrics && metrics.totalActions > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>⚙️ Actie Status Overzicht</CardTitle>
-            <CardDescription>Status van alle acties in het systeem</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 border rounded-lg bg-yellow-50 border-yellow-200">
-                <div className="text-2xl font-bold text-yellow-600">{formatNumber(metrics.pendingActions)}</div>
-                <div className="text-sm text-yellow-700">Openstaand</div>
-                <div className="text-xs text-yellow-600 mt-1">
-                  {formatPercentage(metrics.totalActions, metrics.pendingActions)} van totaal
-                </div>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-blue-50 border-blue-200">
-                <div className="text-2xl font-bold text-blue-600">{formatNumber(metrics.inProgressActions)}</div>
-                <div className="text-sm text-blue-700">In Behandeling</div>
-                <div className="text-xs text-blue-600 mt-1">
-                  {formatPercentage(metrics.totalActions, metrics.inProgressActions)} van totaal
-                </div>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-green-50 border-green-200">
-                <div className="text-2xl font-bold text-green-600">{formatNumber(metrics.completedActions)}</div>
-                <div className="text-sm text-green-700">Voltooid Vandaag</div>
-                <div className="text-xs text-green-600 mt-1">
-                  {formatPercentage(metrics.totalActions, metrics.completedActions)} van totaal
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* SAC KPI Section - Always show */}
-      <Card>
-        <CardHeader>
-                      <CardTitle>👁️ Security Officer Kwaliteitsindicatoren</CardTitle>
-          <CardDescription>
-                          KPI's opgegeven door Security Officers bij incident aanmaak - {getPeriodLabel().toLowerCase()}
-            {metrics && (metrics.unregisteredIncidents + metrics.incidentsRequiringEscalation + metrics.securityResolvedIncidents + 
-              metrics.incorrectDiagnosis + metrics.incorrectServiceParty + metrics.lateServiceParty + metrics.multipleServiceParties) === 0 && 
-              " (nog geen bijzonderheden gemarkeerd)"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="text-center p-4 border rounded-lg bg-blue-50 border-blue-200">
-              <div className="text-2xl font-bold text-blue-600">{formatNumber(metrics?.unregisteredIncidents || 0)}</div>
-              <div className="text-sm text-blue-700">Niet Geregistreerd</div>
-              <div className="text-xs text-blue-600 mt-1">
-                Incident was al bekend
-              </div>
-            </div>
-            <div className="text-center p-4 border rounded-lg bg-orange-50 border-orange-200">
-              <div className="text-2xl font-bold text-orange-600">{formatNumber(metrics?.incidentsRequiringEscalation || 0)}</div>
-              <div className="text-sm text-orange-700">Escalatie Nodig</div>
-              <div className="text-xs text-orange-600 mt-1">
-                Nabellen vereist
-              </div>
-            </div>
-            <div className="text-center p-4 border rounded-lg bg-green-50 border-green-200">
-                              <div className="text-2xl font-bold text-green-600">{formatNumber(metrics?.securityResolvedIncidents || 0)}</div>
-                              <div className="text-sm text-green-700">Door Security Officer Opgelost</div>
-              <div className="text-xs text-green-600 mt-1">
-                Zelfstandig afgehandeld
-              </div>
-            </div>
-            <div className="text-center p-4 border rounded-lg bg-purple-50 border-purple-200">
-              <div className="text-2xl font-bold text-purple-600">{formatNumber(metrics?.lateServiceParty || 0)}</div>
-              <div className="text-sm text-purple-700">Service Party Te Laat</div>
-              <div className="text-xs text-purple-600 mt-1">
-                Buiten verwachte tijd
-              </div>
-            </div>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              📊 KPI Dashboard
+            </h1>
+            <p className="text-gray-600">
+              Uitgebreide inzichten en analyses van security operaties
+            </p>
           </div>
           
-                        {/* Second row for additional Security Officer KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div className="text-center p-4 border rounded-lg bg-red-50 border-red-200">
-              <div className="text-2xl font-bold text-red-600">{formatNumber(metrics?.incorrectDiagnosis || 0)}</div>
-              <div className="text-sm text-red-700">Verkeerde Diagnose</div>
-              <div className="text-xs text-red-600 mt-1">
-                Service party fout
-              </div>
-            </div>
-            <div className="text-center p-4 border rounded-lg bg-yellow-50 border-yellow-200">
-              <div className="text-2xl font-bold text-yellow-600">{formatNumber(metrics?.incorrectServiceParty || 0)}</div>
-              <div className="text-sm text-yellow-700">Verkeerde Service Party</div>
-              <div className="text-xs text-yellow-600 mt-1">
-                Eerste ter plaatse
-              </div>
-            </div>
-            <div className="text-center p-4 border rounded-lg bg-indigo-50 border-indigo-200">
-              <div className="text-2xl font-bold text-indigo-600">{formatNumber(metrics?.multipleServiceParties || 0)}</div>
-              <div className="text-sm text-indigo-700">Meerdere Parties Nodig</div>
-              <div className="text-xs text-indigo-600 mt-1">
-                Complexe problemen
-              </div>
-            </div>
+          {/* Time Range Selector */}
+          <div className="flex items-center space-x-2 bg-white rounded-lg shadow-sm border p-2">
+            <span className="text-sm font-medium text-gray-700">Tijdsperiode:</span>
+            <select
+              value={selectedTimeRange.value}
+              onChange={(e) => {
+                const range = timeRanges.find(r => r.value === e.target.value);
+                if (range) setSelectedTimeRange(range);
+              }}
+              className="text-sm border-0 bg-transparent focus:ring-0 focus:outline-none"
+            >
+              {timeRanges.map((range) => (
+                <option key={range.value} value={range.value}>
+                  {range.label}
+                </option>
+              ))}
+            </select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Period Overview */}
-      {metrics && (
-        <Card>
-          <CardHeader>
-            <CardTitle>📅 Periode Overzicht</CardTitle>
-            <CardDescription>Incidenten per tijdsperiode (onafhankelijk van filter)</CardDescription>
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <span className="text-2xl mr-2">📈</span>
+              Totaal Incidenten
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{formatNumber(metrics.todayIncidents)}</div>
-                <div className="text-sm text-muted-foreground">Vandaag</div>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{formatNumber(metrics.thisWeekIncidents)}</div>
-                <div className="text-sm text-muted-foreground">Deze Week</div>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{formatNumber(metrics.thisMonthIncidents)}</div>
-                <div className="text-sm text-muted-foreground">Deze Maand</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Priority Distribution */}
-      {metrics && metrics.totalIncidents > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>🎯 Prioriteit Verdeling</CardTitle>
-            <CardDescription>Verdeling van incidenten per prioriteit - {getPeriodLabel().toLowerCase()}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 border rounded-lg bg-red-50 border-red-200">
-                <div className="text-2xl font-bold text-red-600">{formatNumber(metrics.highPriorityIncidents)}</div>
-                <div className="text-sm text-red-700">Hoog</div>
-                <div className="text-xs text-red-600 mt-1">
-                  {formatPercentage(metrics.totalIncidents, metrics.highPriorityIncidents)}
-                </div>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-orange-50 border-orange-200">
-                <div className="text-2xl font-bold text-orange-600">{formatNumber(metrics.mediumPriorityIncidents)}</div>
-                <div className="text-sm text-orange-700">Medium</div>
-                <div className="text-xs text-orange-600 mt-1">
-                  {formatPercentage(metrics.totalIncidents, metrics.mediumPriorityIncidents)}
-                </div>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-green-50 border-green-200">
-                <div className="text-2xl font-bold text-green-600">{formatNumber(metrics.lowPriorityIncidents)}</div>
-                <div className="text-sm text-green-700">Laag</div>
-                <div className="text-xs text-green-600 mt-1">
-                  {formatPercentage(metrics.totalIncidents, metrics.lowPriorityIncidents)}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Location and Category Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Location Performance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>📍 Locatie Overzicht</CardTitle>
-            <CardDescription>Incidenten per locatie - {getPeriodLabel().toLowerCase()}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {locationMetrics.length > 0 ? locationMetrics.map((location, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">{location.location}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatNumber(location.incidents)} totaal
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-red-600">
-                      {formatNumber(location.openIncidents)} open
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatPercentage(location.incidents, location.openIncidents)} open
-                    </div>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center text-muted-foreground py-8">
-                  Geen incidenten in {getPeriodLabel().toLowerCase()}
-                </div>
-              )}
-            </div>
+            <div className="text-3xl font-bold">{kpiData.totalIncidents}</div>
+            <p className="text-blue-100 text-sm mt-1">
+              In {selectedTimeRange.label.toLowerCase()}
+            </p>
           </CardContent>
         </Card>
 
-        {/* Category Analysis */}
-        <Card>
-          <CardHeader>
-            <CardTitle>📊 Categorie Analyse</CardTitle>
-            <CardDescription>Incidenten per categorie - {getPeriodLabel().toLowerCase()}</CardDescription>
+        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <span className="text-2xl mr-2">✅</span>
+              Zelf Opgelost
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {categoryMetrics.length > 0 ? categoryMetrics.map((category, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">{category.category}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatNumber(category.incidents)} totaal
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-red-600">
-                      {formatNumber(category.openIncidents)} open
-                    </div>
-                    <div className="text-xs text-orange-600">
-                      {formatNumber(category.highPriority)} hoog prioriteit
-                    </div>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center text-muted-foreground py-8">
-                  Geen incidenten in {getPeriodLabel().toLowerCase()}
-                </div>
-              )}
+            <div className="text-3xl font-bold">
+              {kpiData.sacPerformance.completionRate}%
             </div>
+            <p className="text-green-100 text-sm mt-1">
+              Door SAC opgelost
+            </p>
           </CardContent>
         </Card>
+
+
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Incident Trends */}
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <span className="text-2xl mr-2">📈</span>
+              Incident Trends
+            </CardTitle>
+            <CardDescription>
+              Incidenten over tijd per maand
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={kpiData.incidentsByMonth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Area 
+                  type="monotone" 
+                  dataKey="count" 
+                  fill={COLORS.primary} 
+                  fillOpacity={0.3} 
+                  stroke={COLORS.primary} 
+                  strokeWidth={2}
+                />
+                <Bar dataKey="count" fill={COLORS.secondary} opacity={0.7} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Action Trends */}
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <span className="text-2xl mr-2">⚡</span>
+              Actie Trends
+            </CardTitle>
+            <CardDescription>
+              Acties over tijd per maand
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={kpiData.actionsByMonth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke={COLORS.accent} 
+                  strokeWidth={3}
+                  dot={{ fill: COLORS.accent, strokeWidth: 2, r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* SAC Activities Distribution */}
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <span className="text-2xl mr-2">👮</span>
+              SAC Werkzaamheden
+            </CardTitle>
+            <CardDescription>
+              Wat hebben de SAC officieren gedaan?
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={kpiData.sacActivities}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {kpiData.sacActivities.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Priority Distribution */}
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <span className="text-2xl mr-2">🎯</span>
+              Prioriteit Verdeling
+            </CardTitle>
+            <CardDescription>
+              Incidenten per prioriteitsniveau
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={kpiData.incidentsByPriority}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="priority" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill={COLORS.danger} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+
+      </div>
+
+      {/* SAC Performance Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <span className="text-2xl mr-2">⏱️</span>
+              Gem. Response Tijd
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {kpiData.sacPerformance.avgCompletionHours}min
+            </div>
+            <p className="text-blue-600 text-sm mt-1">
+              Gemiddelde response tijd
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-orange-50 to-orange-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <span className="text-2xl mr-2">🚨</span>
+              Late Aankomsten
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {kpiData.sacPerformance.highPriorityActions}
+            </div>
+            <p className="text-orange-600 text-sm mt-1">
+              Service party te laat
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-green-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <span className="text-2xl mr-2">📊</span>
+              Totaal Incidenten
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {kpiData.sacPerformance.totalActions}
+            </div>
+            <p className="text-green-600 text-sm mt-1">
+              Alle incidenten
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detailed Metrics */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Location Analysis */}
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <span className="text-2xl mr-2">📍</span>
+              Locatie Analyse
+            </CardTitle>
+            <CardDescription>
+              Incidenten per locatie
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={kpiData.incidentsByLocation} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="location" type="category" width={80} />
+                <Tooltip />
+                <Bar dataKey="count" fill={COLORS.info} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+
+      </div>
+
+      {/* Export Section */}
+      <div className="mt-8 text-center">
+        <Button 
+          onClick={() => {
+            // TODO: Implement export functionality
+            alert('Export functionaliteit komt binnenkort!');
+          }}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+        >
+          📊 Export KPI Rapport
+        </Button>
       </div>
     </div>
   );

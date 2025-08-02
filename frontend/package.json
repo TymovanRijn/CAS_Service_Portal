@@ -4,7 +4,13 @@
   "description": "SecureHub - Professional Incident & Action Management Platform (Frontend)",
   "private": true,
   "homepage": "https://securehub.app",
-  "keywords": ["incident-management", "action-tracking", "security", "workflow", "enterprise"],
+  "keywords": [
+    "incident-management",
+    "action-tracking",
+    "security",
+    "workflow",
+    "enterprise"
+  ],
   "author": "SecureHub Team",
   "license": "MIT",
   "dependencies": {
@@ -16,6 +22,7 @@
     "@types/jest": "^27.5.2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@types/recharts": "^1.8.29",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.516.0",
@@ -23,6 +30,7 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "react-scripts": "5.0.1",
+    "recharts": "^3.1.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^4.9.5",

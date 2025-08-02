@@ -117,7 +117,7 @@ Beschikbare kennisbank artikelen:
 ${entriesText}
 
 Analyseer welke artikelen het meest relevant zijn voor de zoekquery. Geef de ID's van de meest relevante artikelen terug, gesorteerd op relevantie (meest relevant eerst).
-
+het moet wel echt bij de gestelde vraag passen, en niet meer of minder.
 Geef alleen de ID's terug, gescheiden door komma's, bijvoorbeeld: 5,2,8,1
 Als geen artikelen relevant zijn, geef dan "geen" terug.
     `;
@@ -206,10 +206,59 @@ const generateKnowledgeBaseAnswer = async (question, tenant) => {
       };
     }
 
-    console.log(`📚 Providing AI with ALL ${allArticles.rows.length} knowledge base articles...`);
+    // Step 2: Filter and prioritize most relevant articles
+    const questionLower = question.toLowerCase();
+    const relevantArticles = allArticles.rows
+      .map((entry, index) => ({
+        id: entry.id,
+        title: entry.title,
+        content: entry.content,
+        author: entry.author_name,
+        category: entry.category || 'Algemeen',
+        created: entry.created_at,
+        views: entry.view_count || 0,
+        relevance: 0
+      }))
+      .map(article => {
+        // Calculate relevance score
+        let score = 0;
+        const titleLower = article.title.toLowerCase();
+        const contentLower = article.content.toLowerCase();
+        
+        // Exact matches get highest score
+        if (titleLower.includes(questionLower) || contentLower.includes(questionLower)) {
+          score += 10;
+        }
+        
+        // Partial word matches
+        const questionWords = questionLower.split(' ').filter(word => word.length > 2);
+        questionWords.forEach(word => {
+          if (titleLower.includes(word)) score += 3;
+          if (contentLower.includes(word)) score += 1;
+        });
+        
+        // Acronyms and abbreviations
+        if (questionLower.length <= 5 && titleLower.includes(questionLower)) {
+          score += 8;
+        }
+        
+        article.relevance = score;
+        return article;
+      })
+      .filter(article => article.relevance > 0) // Only include relevant articles
+      .sort((a, b) => b.relevance - a.relevance) // Sort by relevance
+      .slice(0, 5); // Limit to top 5 most relevant articles
     
-    // Step 2: Give AI access to ENTIRE knowledge base
-    const fullKnowledgeBase = allArticles.rows.map((entry, index) => ({
+    console.log(`📚 Found ${relevantArticles.length} relevant articles for question: "${question}"`);
+    if (relevantArticles.length > 0) {
+      console.log('🔍 Most relevant articles:');
+      relevantArticles.forEach((article, index) => {
+        console.log(`  ${index + 1}. [ID: ${article.id}] "${article.title}" (relevance: ${article.relevance})`);
+      });
+    }
+    
+    // If no relevant articles found, use all articles
+    const fullKnowledgeBase = relevantArticles.length > 0 ? relevantArticles : allArticles.rows.map((entry, index) => ({
       id: entry.id,
       title: entry.title,
       content: entry.content,
@@ -232,20 +281,22 @@ ${article.content}
 ---`
 ).join('\n')}
 
-INSTRUCTIES:
+BELANGRIJKE REGELS:
 ✅ Geef een kort, praktisch antwoord (max 200 woorden)
-✅ Herschrijf de relevante artikel-inhoud in je eigen woorden  
-✅ Verwijs naar gebruikte artikelen met [ID: X]
+✅ Gebruik ALLEEN informatie uit artikelen die DIRECT over de vraag gaan
+✅ Als er meerdere relevante artikelen zijn, focus op het meest specifieke
 ✅ Wees direct en to-the-point
 ✅ Nederlands
+❌ COMBINEER GEEN INFORMATIE VAN VERSCHILLENDE ARTIKELEN TENZIJ HET LOGISCH IS
+❌ GA NIET AF OP ARTIKELEN DIE NIET DIRECT OVER DE VRAAG GAAN
 
 ANTWOORD:`;
 
     console.log('🤖 Sending FULL knowledge base to Qwen2.5:3b (smart & fast) for AI processing...');
     const aiResponse = await ollamaService.generateText(enhancedPrompt, {
       model: 'qwen2.5:3b',           // 🚀 Perfect balance: intelligent but MacBook Air friendly
-      temperature: 0.2,              // 🎯 More focused for concise responses
-      maxTokens: 300                 // 📝 Shorter, more direct answers
+      temperature: 0.1,              // 🎯 Very focused for precise responses
+      maxTokens: 250                 // 📝 Shorter, more direct answers
     });
     console.log('✅ Qwen2.5:3b AI response with full knowledge base generated');
     

@@ -293,6 +293,10 @@ const tenantAuthMiddleware = async (req, res, next) => {
 // Permission checking middleware for tenant users
 const requireTenantPermission = (requiredPermissions) => {
   return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not authenticated.' });
+    }
+    
     if (req.user.isSuperAdmin) {
       return next(); // Super admin has all permissions
     }
