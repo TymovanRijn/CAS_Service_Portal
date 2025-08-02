@@ -9,12 +9,9 @@ const {
   forceRefreshAIInsights,
   getAIInsightsCacheStatus
 } = require('../controllers/aiController');
-const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { requireRole } = require('../middleware/authMiddleware');
 
 const router = express.Router();
-
-// All AI routes require authentication
-router.use(authMiddleware);
 
 // Test AI functionality (available to all authenticated users)
 router.get('/test', testAI);

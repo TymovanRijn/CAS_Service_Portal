@@ -7,14 +7,11 @@ const {
   deleteUser,
   getUserStats
 } = require('../controllers/userController');
-const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { requireRole } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authMiddleware);
-
-// Admin only routes for user management
+// Admin only routes for user management (authentication handled globally)
 router.get('/users', requireRole(['Admin']), getUsers);
 router.get('/roles', requireRole(['Admin']), getRoles);
 router.get('/stats', requireRole(['Admin']), getUserStats);

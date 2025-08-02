@@ -128,7 +128,10 @@ app.use((req, res, next) => {
   }
 });
 
-// Test route
+// Public routes (no authentication required) - MUST be before other routes
+app.use('/api/public', publicRoutes);
+
+// Health endpoint (no authentication required)
 app.get('/api/health', (req, res) => {
   res.json({ 
     message: 'CAS Service Portal Backend is running!',
@@ -138,22 +141,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Public routes (no authentication required) - MUST be before other routes
-app.use('/api/public', publicRoutes);
-
-// Authentication middleware - skip for public routes and health endpoint
-app.use((req, res, next) => {
-  // Skip authentication for public routes
-  if (req.path.startsWith('/api/public/')) {
+// Global authentication middleware for all other API routes
+app.use('/api', (req, res, next) => {
+  // Skip authentication for public routes and health endpoint
+  if (req.path.startsWith('/public/') || req.path === '/health') {
     return next();
   }
   
-  // Skip authentication for health endpoint
-  if (req.path === '/api/health') {
-    return next();
-  }
-  
-  // Apply authentication for other routes
+  // Apply authentication for all other API routes
   const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
   
   if (!token) {
