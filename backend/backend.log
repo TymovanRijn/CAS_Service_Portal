@@ -284,3 +284,54 @@ Tenant user login error: error: relation "users" does not exist
 [PUBLIC] GET /tenants - 200 - 1ms
 [INFO] GET /tenants - 200 - 0ms - 127.0.0.1
 [PUBLIC] GET /tenants - 200 - 1ms
+[INFO] GET /tenants - 200 - 46ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 47ms
+[ERROR] POST /login - 400 - 17ms - 127.0.0.1
+[ERROR] POST /login - 400 - 23ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 6ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 6ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[INFO] POST /login - 200 - 97ms - 127.0.0.1
+[INFO] GET /profile - 200 - 10ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 16ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 19ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[INFO] POST /login - 200 - 104ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 15ms - 127.0.0.1
+[INFO] GET /profile - 200 - 15ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 18ms - 127.0.0.1
+[ERROR] POST /login - 400 - 17ms - 127.0.0.1
+[ERROR] POST /login - 400 - 13ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 14ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 13ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[INFO] PUT /tenants/3 - 200 - 21ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 21ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 22ms - 127.0.0.1
+[INFO] PUT /tenants/2 - 200 - 6ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 15ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 15ms - 127.0.0.1
+[INFO] PUT /tenants/1 - 200 - 3ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 7ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 8ms - 127.0.0.1
+[INFO] GET /profile - 200 - 3ms - 127.0.0.1
+[INFO] GET /tenants - 304 - 14ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 304 - 13ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[ERROR] POST /login - 400 - 20ms - 127.0.0.1
+[ERROR] GET /super-admin/tenants - 401 - 0ms - 127.0.0.1
+[ERROR] GET /super-admin/tenants - 401 - 0ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[INFO] GET /tenants - 200 - 0ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 0ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
