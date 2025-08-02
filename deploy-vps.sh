@@ -141,6 +141,14 @@ print_info "Configuring backend for VPS production..."
 if [ ! -f .env ]; then
     print_warning "No backend .env file found. Creating VPS production .env..."
     cat > .env << EOF
+# Backend Environment Configuration
+NODE_ENV=production
+PORT=3001
+
+# CORS Configuration
+FRONTEND_URL=https://sac.cas-nl.com
+ALLOWED_ORIGINS=https://sac.cas-nl.com,https://www.sac.cas-nl.com
+
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
@@ -151,18 +159,32 @@ DB_PASSWORD=your_secure_password_here
 # JWT Configuration
 JWT_SECRET=your_very_secure_jwt_secret_minimum_32_characters_long
 
-# Server Configuration
-PORT=3001
-NODE_ENV=production
-
-# CORS Configuration
-FRONTEND_URL=https://sac.cas-nl.com
-ALLOWED_ORIGINS=https://sac.cas-nl.com,https://www.sac.cas-nl.com
+# Network Configuration
+HOST=0.0.0.0
 
 # AI Configuration
 AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2:3b
+
+# Security Configuration
+HELMET_ENABLED=true
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FORMAT=combined
+
+# File Upload Configuration
+MAX_FILE_SIZE=10485760
+UPLOAD_PATH=./uploads
+
+# Session Configuration
+SESSION_SECRET=your_session_secret_here
+SESSION_COOKIE_SECURE=true
+SESSION_COOKIE_HTTPONLY=true
 EOF
     print_warning "Please edit backend .env file with your actual database password and JWT secret!"
     print_warning "Make sure to set:"
