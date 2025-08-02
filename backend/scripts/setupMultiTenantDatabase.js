@@ -368,16 +368,13 @@ async function createDefaultSuperAdmin() {
   }
 }
 
+// Export functions for use in other scripts
 module.exports = {
   setupMultiTenantDatabase,
   createTenant,
   createDefaultSuperAdmin,
   pool
 };
-
-// Run setup if called directly
-// Export functions for use in other scripts
-module.exports = setupMultiTenantDatabase;
 
 if (require.main === module) {
   (async () => {
