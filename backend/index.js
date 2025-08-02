@@ -20,6 +20,9 @@ const helmet = require('helmet');
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Trust proxy for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
 // Connect to the database
 connectDB();
 
@@ -36,6 +39,14 @@ const getAllowedOrigins = () => {
     origins.push(...process.env.ALLOWED_ORIGINS.split(','));
   }
   
+  // Hardcoded origins for production
+  if (process.env.NODE_ENV === 'production') {
+    origins.push(
+      'https://sac.cas-nl.com',
+      'https://www.sac.cas-nl.com'
+    );
+  }
+  
   // Development origins (only in development)
   if (process.env.NODE_ENV !== 'production') {
     origins.push(
@@ -44,6 +55,11 @@ const getAllowedOrigins = () => {
       'http://10.41.68.202:3000'
     );
   }
+  
+  console.log(`🔧 getAllowedOrigins() called - NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`🔧 getAllowedOrigins() - FRONTEND_URL: ${process.env.FRONTEND_URL}`);
+  console.log(`🔧 getAllowedOrigins() - ALLOWED_ORIGINS: ${process.env.ALLOWED_ORIGINS}`);
+  console.log(`🔧 getAllowedOrigins() - Final origins:`, origins);
   
   return origins;
 };
