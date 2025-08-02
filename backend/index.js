@@ -50,6 +50,11 @@ const getAllowedOrigins = () => {
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    
     const allowedOrigins = getAllowedOrigins();
     
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -144,8 +149,11 @@ app.get('/api/health', (req, res) => {
 
 // Global authentication middleware for all other API routes
 app.use('/api', (req, res, next) => {
-  // Skip authentication for public routes and health endpoint
-  if (req.path.startsWith('/public/') || req.path === '/health') {
+  // Skip authentication for public routes, health endpoint, and login routes
+  if (req.path.startsWith('/public/') || 
+      req.path === '/health' ||
+      req.path === '/tenant/login' ||
+      req.path === '/super-admin/login') {
     return next();
   }
   
