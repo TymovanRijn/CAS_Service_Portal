@@ -13,3 +13,274 @@ Database connected
 🤖 AI insights temporarily disabled during tenant migration
 ✅ Background AI insights generated successfully in 1ms
 📊 Generated 0 AI insights
+[INFO] GET /profile - 200 - 19ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 10ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 10ms - 127.0.0.1
+[INFO] PUT /tenants/1 - 200 - 49ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 5ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 10ms - 127.0.0.1
+[INFO] GET /profile - 200 - 3ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 3ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 7ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 4ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 5ms
+[ERROR] POST /login - 400 - 84ms - 127.0.0.1
+[INFO] POST /login - 200 - 108ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 8ms - 127.0.0.1
+[INFO] GET /profile - 200 - 8ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 10ms - 127.0.0.1
+[INFO] PUT /tenants/1 - 200 - 6ms - 127.0.0.1
+[INFO] GET /dashboard/stats - 200 - 4ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 9ms - 127.0.0.1
+🏢 Creating new tenant: Custom Airport Solutions (casnl)
+❌ Error creating tenant: error: column "status" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async createTenant (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/scripts/setupMultiTenantDatabase.js:322:5)
+    at async createNewTenant (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/superAdminController.js:209:20) {
+  length: 273,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'SQL statement "CREATE INDEX IF NOT EXISTS idx_tenant_casnl_incidents_status ON tenant_casnl.incidents(status)"\n' +
+    'PL/pgSQL function create_tenant_schema(text) line 140 at EXECUTE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'indexcmds.c',
+  line: '1891',
+  routine: 'ComputeIndexAttrs'
+}
+Create tenant error: error: column "status" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async createTenant (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/scripts/setupMultiTenantDatabase.js:322:5)
+    at async createNewTenant (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/superAdminController.js:209:20) {
+  length: 273,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'SQL statement "CREATE INDEX IF NOT EXISTS idx_tenant_casnl_incidents_status ON tenant_casnl.incidents(status)"\n' +
+    'PL/pgSQL function create_tenant_schema(text) line 140 at EXECUTE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'indexcmds.c',
+  line: '1891',
+  routine: 'ComputeIndexAttrs'
+}
+[ERROR] POST /tenants - 500 - 107ms - 127.0.0.1
+[INFO] GET /profile - 200 - 10ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /tenants - 200 - 8ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /dashboard/stats - 200 - 2ms - 127.0.0.1
+[INFO] GET /profile - 200 - 2ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /tenants - 200 - 8ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /dashboard/stats - 200 - 12ms - 127.0.0.1
+[INFO] GET /profile - 200 - 4ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /tenants - 200 - 10ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /dashboard/stats - 200 - 4ms - 127.0.0.1
+[INFO] GET /profile - 200 - 3ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /dashboard/stats - 200 - 3ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 5ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 14ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 15ms
+[INFO] POST /login - 200 - 94ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /tenants - 200 - 11ms - 127.0.0.1
+Error accessing schema tenant_casnl: relation "tenant_casnl.users" does not exist
+[INFO] GET /dashboard/stats - 200 - 12ms - 127.0.0.1
+[INFO] GET /profile - 200 - 11ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 2ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 0ms
+Tenant user login error: error: relation "users" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async loginTenantUser (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/tenantAuthController.js:65:20) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '96',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1452',
+  routine: 'parserOpenTable'
+}
+[ERROR] POST /login - 500 - 18ms - 127.0.0.1
+Tenant user login error: error: relation "users" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async loginTenantUser (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/tenantAuthController.js:65:20) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '96',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1452',
+  routine: 'parserOpenTable'
+}
+[ERROR] POST /login - 500 - 19ms - 127.0.0.1
+Tenant user login error: error: relation "users" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async loginTenantUser (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/tenantAuthController.js:65:20) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '96',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1452',
+  routine: 'parserOpenTable'
+}
+[ERROR] POST /login - 500 - 15ms - 127.0.0.1
+Tenant user login error: error: relation "users" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async loginTenantUser (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/tenantAuthController.js:65:20) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '96',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1452',
+  routine: 'parserOpenTable'
+}
+[ERROR] POST /login - 500 - 15ms - 127.0.0.1
+Tenant user login error: error: relation "users" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async loginTenantUser (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/tenantAuthController.js:65:20) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '96',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1452',
+  routine: 'parserOpenTable'
+}
+[ERROR] POST /login - 500 - 16ms - 127.0.0.1
+Tenant user login error: error: relation "users" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async loginTenantUser (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/tenantAuthController.js:65:20) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '96',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1452',
+  routine: 'parserOpenTable'
+}
+[ERROR] POST /login - 500 - 14ms - 127.0.0.1
+Tenant user login error: error: relation "users" does not exist
+    at /Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async loginTenantUser (/Users/tymo/Documents/CAS_Service_Portal/CAS_Service_Portal/backend/controllers/tenantAuthController.js:65:20) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '96',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1452',
+  routine: 'parserOpenTable'
+}
+[ERROR] POST /login - 500 - 15ms - 127.0.0.1
+[ERROR] POST /login - 400 - 18ms - 127.0.0.1
+[INFO] GET /tenants - 200 - 0ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 0ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 2ms
+[INFO] GET /tenants - 200 - 1ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms
+[INFO] GET /tenants - 200 - 0ms - 127.0.0.1
+[PUBLIC] GET /tenants - 200 - 1ms

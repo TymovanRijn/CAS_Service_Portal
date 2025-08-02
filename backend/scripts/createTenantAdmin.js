@@ -96,13 +96,24 @@ async function createTenantAdmin() {
     ];
 
     for (const role of roles) {
-      await client.query(`
-        INSERT INTO ${tenant.database_schema}.roles (name, description, permissions)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (name) DO UPDATE SET
-          description = EXCLUDED.description,
-          permissions = EXCLUDED.permissions
-      `, [role.name, role.description, role.permissions]);
+      try {
+        await client.query(`
+          INSERT INTO ${tenant.database_schema}.roles (name, description, permissions)
+          VALUES ($1, $2, $3)
+        `, [role.name, role.description, role.permissions]);
+        console.log(`   ✅ Added role: ${role.name}`);
+      } catch (error) {
+        if (error.code === '23505') { // Unique violation
+          await client.query(`
+            UPDATE ${tenant.database_schema}.roles 
+            SET description = $2, permissions = $3
+            WHERE name = $1
+          `, [role.name, role.description, role.permissions]);
+          console.log(`   ✅ Updated role: ${role.name}`);
+        } else {
+          console.log(`   ⚠️  Error with role ${role.name}: ${error.message}`);
+        }
+      }
     }
     
     console.log('✅ Roles created in tenant schema\n');

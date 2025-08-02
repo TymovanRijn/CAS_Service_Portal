@@ -210,7 +210,7 @@ async function setupMultiTenantDatabase() {
         
         -- Create indexes for performance
         EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || schema_name || '_incidents_created_at ON ' || quote_ident(schema_name) || '.incidents(created_at)';
-        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || schema_name || '_incidents_status ON ' || quote_ident(schema_name) || '.incidents(status)';
+        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || schema_name || '_incidents_priority ON ' || quote_ident(schema_name) || '.incidents(priority)';
         EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || schema_name || '_actions_status ON ' || quote_ident(schema_name) || '.actions(status)';
         EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || schema_name || '_knowledge_base_tags ON ' || quote_ident(schema_name) || '.knowledge_base USING GIN (tags)';
         
