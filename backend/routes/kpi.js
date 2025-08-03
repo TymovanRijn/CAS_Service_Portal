@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getTenantConnection } = require('../middleware/tenantMiddleware');
-const { tenantMiddleware } = require('../middleware/tenantMiddleware');
+const { getTenantConnection, tenantAuthAndValidationMiddleware, requireTenantPermission } = require('../middleware/tenantMiddleware');
+
+// All routes require tenant authentication and validation
+router.use(tenantAuthAndValidationMiddleware);
 
 // Get KPI Dashboard Data - Real database data
-router.get('/dashboard', tenantMiddleware, async (req, res) => {
+router.get('/dashboard', requireTenantPermission(['all', 'dashboard:read']), async (req, res) => {
   const { days = 30 } = req.query;
   let client;
   

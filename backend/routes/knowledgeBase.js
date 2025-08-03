@@ -55,33 +55,33 @@ const upload = multer({
 router.use(tenantAuthAndValidationMiddleware);
 
 // Get all knowledge base entries
-router.get('/', requireTenantPermission(['all', 'knowledge:read', 'knowledge']), getKnowledgeBaseEntries);
+router.get('/', requireTenantPermission(['all', 'knowledge_base:read']), getKnowledgeBaseEntries);
 
 // Get single knowledge base entry
-router.get('/:id', requireTenantPermission(['all', 'knowledge:read', 'knowledge']), getKnowledgeBaseEntry);
+router.get('/:id', requireTenantPermission(['all', 'knowledge_base:read']), getKnowledgeBaseEntry);
 
 // Create new knowledge base entry
 router.post('/', 
-  requireTenantPermission(['all', 'knowledge:create', 'knowledge']), 
+  requireTenantPermission(['all', 'knowledge_base:create']), 
   upload.single('image'), 
   createKnowledgeBaseEntry
 );
 
 // Update knowledge base entry
 router.put('/:id', 
-  requireTenantPermission(['all', 'knowledge:update', 'knowledge']), 
+  requireTenantPermission(['all', 'knowledge_base:update']), 
   upload.single('image'), 
   updateKnowledgeBaseEntry
 );
 
 // Delete knowledge base entry
-router.delete('/:id', requireTenantPermission(['all', 'knowledge:delete', 'knowledge']), deleteKnowledgeBaseEntry);
+router.delete('/:id', requireTenantPermission(['all', 'knowledge_base:delete']), deleteKnowledgeBaseEntry);
 
 // AI-powered search
-router.post('/search', requireTenantPermission(['all', 'knowledge:read', 'knowledge']), aiSearch);
+router.post('/search', requireTenantPermission(['all', 'knowledge_base:read']), aiSearch);
 
 // AI-powered question answering
-router.post('/ask', requireTenantPermission(['all', 'knowledge:read', 'knowledge']), async (req, res) => {
+router.post('/ask', requireTenantPermission(['all', 'knowledge_base:read']), async (req, res) => {
   try {
     const { question } = req.body;
     

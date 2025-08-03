@@ -462,6 +462,7 @@ const getAvailablePermissions = async (req, res) => {
       { id: 'knowledge_base:read', name: '👁️ Kennisbank Bekijken', description: 'Kennisbank raadplegen', category: '📚 Kennisbank' },
       { id: 'knowledge_base:create', name: '➕ Kennisbank Schrijven', description: 'Nieuwe artikelen toevoegen', category: '📚 Kennisbank' },
       { id: 'knowledge_base:update', name: '✏️ Kennisbank Bewerken', description: 'Artikelen wijzigen', category: '📚 Kennisbank' },
+      { id: 'knowledge_base:delete', name: '🗑️ Kennisbank Verwijderen', description: 'Artikelen verwijderen', category: '📚 Kennisbank' },
       
       // Management Features
       { id: 'categories:read', name: '👁️ Categorieën Bekijken', description: 'Categorieën inzien', category: '🏷️ Beheer' },
