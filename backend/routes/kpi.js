@@ -6,7 +6,7 @@ const { getTenantConnection, tenantAuthAndValidationMiddleware, requireTenantPer
 router.use(tenantAuthAndValidationMiddleware);
 
 // Get KPI Dashboard Data - Real database data
-router.get('/dashboard', requireTenantPermission(['all', 'dashboard:read']), async (req, res) => {
+router.get('/dashboard', requireTenantPermission(['all', 'kpi_dashboard']), async (req, res) => {
   const { days = 30 } = req.query;
   let client;
   

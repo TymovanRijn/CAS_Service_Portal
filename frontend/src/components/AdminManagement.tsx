@@ -48,6 +48,7 @@ interface Permission {
   name: string;
   description: string;
   category: string;
+  icon?: string;
 }
 
 export const AdminManagement: React.FC = () => {
@@ -1134,7 +1135,6 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, availablePermissions, onClo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     try {
       if (role) {
         await api.put(`/api/tenant/roles/${role.id}`, formData);
@@ -1149,43 +1149,14 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, availablePermissions, onClo
     }
   };
 
-  const handlePermissionToggle = (permissionId: string) => {
+  const handleTabToggle = (tabId: string) => {
     setFormData(prev => ({
       ...prev,
-      permissions: prev.permissions.includes(permissionId)
-        ? prev.permissions.filter(p => p !== permissionId)
-        : [...prev.permissions, permissionId]
+      permissions: prev.permissions.includes(tabId)
+        ? prev.permissions.filter(p => p !== tabId)
+        : [...prev.permissions, tabId]
     }));
   };
-
-  const handleCategoryToggle = (category: string, permissions: Permission[]) => {
-    const categoryPermissionIds = permissions.map(p => p.id);
-    const allSelected = categoryPermissionIds.every(id => formData.permissions.includes(id));
-    
-    setFormData(prev => ({
-      ...prev,
-      permissions: allSelected
-        ? prev.permissions.filter(p => !categoryPermissionIds.includes(p))
-        : Array.from(new Set([...prev.permissions, ...categoryPermissionIds]))
-    }));
-  };
-
-  const isCategoryFullySelected = (permissions: Permission[]) => {
-    return permissions.every(p => formData.permissions.includes(p.id));
-  };
-
-  const isCategoryPartiallySelected = (permissions: Permission[]) => {
-    return permissions.some(p => formData.permissions.includes(p.id)) && 
-           !permissions.every(p => formData.permissions.includes(p.id));
-  };
-
-  const groupedPermissions = availablePermissions.reduce((acc, permission) => {
-    if (!acc[permission.category]) {
-      acc[permission.category] = [];
-    }
-    acc[permission.category].push(permission);
-    return acc;
-  }, {} as Record<string, Permission[]>);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1193,7 +1164,6 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, availablePermissions, onClo
         <h2 className="text-xl font-bold mb-4">
           {role ? '✏️ Rol Bewerken' : '➕ Nieuwe Rol'}
         </h2>
-        
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -1208,7 +1178,6 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, availablePermissions, onClo
                 required
               />
             </div>
-            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Beschrijving
@@ -1222,137 +1191,41 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, availablePermissions, onClo
             </div>
           </div>
 
+          {/* --- SIMPELE TABS TOEGANG --- */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Permissies * <span className="text-sm font-normal text-gray-500">({formData.permissions.length} geselecteerd)</span>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Toegang tot Tabs
             </label>
-            
-            {/* Selected Permissions Summary */}
-            {formData.permissions.length > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="text-sm font-medium text-blue-900 mb-2">✅ Geselecteerde rechten:</div>
-                <div className="flex flex-wrap gap-1">
-                  {formData.permissions.map((permId) => {
-                    const perm = availablePermissions.find(p => p.id === permId);
-                    return perm ? (
-                      <span key={permId} className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        {perm.name}
-                        <button
-                          type="button"
-                          onClick={() => handlePermissionToggle(permId)}
-                          className="ml-1 text-blue-600 hover:text-blue-800"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              {Object.entries(groupedPermissions).map(([category, permissions]) => {
-                const isFullySelected = isCategoryFullySelected(permissions);
-                const isPartiallySelected = isCategoryPartiallySelected(permissions);
-                
-                return (
-                  <div key={category} className="border-b border-gray-200 last:border-b-0">
-                    {/* Category Header with Select All */}
-                    <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={isFullySelected}
-                            ref={(el) => {
-                              if (el) el.indeterminate = isPartiallySelected && !isFullySelected;
-                            }}
-                            onChange={() => handleCategoryToggle(category, permissions)}
-                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="ml-2 text-sm font-medium text-gray-900">
-                            {category}
-                          </span>
-                        </label>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {permissions.filter(p => formData.permissions.includes(p.id)).length}/{permissions.length} geselecteerd
-                      </div>
-                    </div>
-                    
-                    {/* Permissions in Category */}
-                    <div className="p-4 space-y-2">
-                      {permissions.map((permission) => {
-                        const isSelected = formData.permissions.includes(permission.id);
-                        const isSpecial = (permission as any).isSpecial;
-                        const isGrouped = (permission as any).isGrouped;
-                        
-                        return (
-                          <label 
-                            key={permission.id} 
-                            className={`flex items-start space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                              isSelected 
-                                ? (isSpecial ? 'bg-red-50 border-2 border-red-200' : 'bg-green-50 border-2 border-green-200') 
-                                : 'hover:bg-gray-50 border-2 border-transparent'
-                            } ${isGrouped ? 'bg-blue-50' : ''}`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handlePermissionToggle(permission.id)}
-                              className={`mt-1 h-4 w-4 border-gray-300 rounded focus:ring-blue-500 ${
-                                isSelected ? 'text-blue-600' : 'text-gray-400'
-                              }`}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className={`text-sm font-medium ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>
-                                {permission.name}
-                                {isGrouped && <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Groep</span>}
-                                {isSpecial && <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Systeem</span>}
-                              </div>
-                              <div className={`text-xs ${isSelected ? 'text-gray-600' : 'text-gray-500'}`}>
-                                {permission.description}
-                              </div>
-                            </div>
-                            {isSelected && (
-                              <div className="text-green-600">
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                            )}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {availablePermissions.map(tab => (
+                <label
+                  key={tab.id}
+                  className={`flex items-center gap-2 p-2 rounded cursor-pointer border ${
+                    formData.permissions.includes(tab.id)
+                      ? 'bg-purple-100 border-purple-400'
+                      : 'bg-gray-50 border-gray-200'
+                  } hover:border-purple-400 transition`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.permissions.includes(tab.id)}
+                    onChange={() => handleTabToggle(tab.id)}
+                    className="accent-purple-600"
+                  />
+                  <span className="text-lg">{tab.icon}</span>
+                  <span className="font-medium">{tab.name}</span>
+                  <span className="text-xs text-gray-500">{tab.description}</span>
+                </label>
+              ))}
             </div>
-            
-            {formData.permissions.length === 0 && (
-              <div className="mt-2 text-sm text-red-600">
-                ⚠️ Selecteer minimaal één permissie voor deze rol
-              </div>
-            )}
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
               Annuleren
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !formData.name.trim() || formData.permissions.length === 0}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isSubmitting ? 'Opslaan...' : (role ? 'Bijwerken' : 'Aanmaken')}
+            <Button type="submit" disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-700">
+              {isSubmitting ? 'Opslaan...' : role ? 'Bijwerken' : 'Aanmaken'}
             </Button>
           </div>
         </form>

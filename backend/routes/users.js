@@ -7,16 +7,29 @@ const {
   deleteUser,
   getUserStats
 } = require('../controllers/userController');
-const { requireRole } = require('../middleware/authMiddleware');
+const { tenantAuthAndValidationMiddleware, requireTenantPermission } = require('../middleware/tenantMiddleware');
 
 const router = express.Router();
 
-// Admin only routes for user management (authentication handled globally)
-router.get('/users', requireRole(['Admin']), getUsers);
-router.get('/roles', requireRole(['Admin']), getRoles);
-router.get('/stats', requireRole(['Admin']), getUserStats);
-router.post('/users', requireRole(['Admin']), createUser);
-router.put('/users/:id', requireRole(['Admin']), updateUser);
-router.delete('/users/:id', requireRole(['Admin']), deleteUser);
+// All routes require tenant authentication and validation
+router.use(tenantAuthAndValidationMiddleware);
+
+// Get users - accessible to ALL authenticated users (needed for assignment)
+router.get('/users', getUsers);
+
+// Get roles - accessible to ALL authenticated users
+router.get('/roles', getRoles);
+
+// Get user stats - admin only
+router.get('/stats', requireTenantPermission(['all', 'admin']), getUserStats);
+
+// Create user - admin only
+router.post('/users', requireTenantPermission(['all', 'admin']), createUser);
+
+// Update user - admin only
+router.put('/users/:id', requireTenantPermission(['all', 'admin']), updateUser);
+
+// Delete user - admin only
+router.delete('/users/:id', requireTenantPermission(['all', 'admin']), deleteUser);
 
 module.exports = router; 

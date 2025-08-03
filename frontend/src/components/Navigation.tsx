@@ -62,7 +62,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Overzicht van vandaag',
-        permissions: ['all', 'dashboard:read']
+        permissions: ['all', 'dashboard']
       },
       {
         id: 'incidents',
@@ -73,7 +73,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Beheer incidenten',
-        permissions: ['all', 'incidents', 'incidents:read']
+        permissions: ['all', 'incidents']
       },
       {
         id: 'knowledge-base',
@@ -84,7 +84,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Deel en ontdek security kennis',
-        permissions: ['all', 'knowledge_base', 'knowledge_base:read']
+        permissions: ['all', 'knowledge_base']
       },
 
       {
@@ -96,7 +96,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Beheer acties',
-        permissions: ['all', 'actions', 'actions:read']
+        permissions: ['all', 'actions']
       },
       {
         id: 'admin',
@@ -108,7 +108,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Gebruikers, categorieën en locaties',
-        permissions: ['all']
+        permissions: ['all', 'admin']
       },
       {
         id: 'kpi-dashboard',
@@ -119,7 +119,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Prestatie-indicatoren en analytics',
-        permissions: ['all', 'dashboard:read']
+        permissions: ['all', 'kpi_dashboard']
       },
       {
         id: 'reports',
@@ -130,7 +130,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Analyses en rapporten',
-        permissions: ['all', 'reports', 'reports:read']
+        permissions: ['all', 'reports']
       },
       {
         id: 'ai-insights',
@@ -141,7 +141,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'AI-gegenereerde inzichten',
-        permissions: ['all', 'dashboard:read', 'ai:read']
+        permissions: ['all', 'ai_insights']
       }
     ];
 

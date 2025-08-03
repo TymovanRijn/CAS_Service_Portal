@@ -54,34 +54,62 @@ const upload = multer({
 // All routes require tenant authentication and validation
 router.use(tenantAuthAndValidationMiddleware);
 
+// Serve knowledge base images
+router.get('/images/:filename', requireTenantPermission(['all', 'knowledge_base']), (req, res) => {
+  const { filename } = req.params;
+  const imagePath = path.join(__dirname, '../uploads/knowledge-base', filename);
+  
+  // Check if file exists
+  if (!require('fs').existsSync(imagePath)) {
+    return res.status(404).json({ message: 'Image not found' });
+  }
+  
+  // Set appropriate headers
+  const ext = path.extname(filename).toLowerCase();
+  const mimeTypes = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp'
+  };
+  
+  res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
+  res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+  
+  // Stream the file
+  const fileStream = require('fs').createReadStream(imagePath);
+  fileStream.pipe(res);
+});
+
 // Get all knowledge base entries
-router.get('/', requireTenantPermission(['all', 'knowledge_base:read']), getKnowledgeBaseEntries);
+router.get('/', requireTenantPermission(['all', 'knowledge_base']), getKnowledgeBaseEntries);
 
 // Get single knowledge base entry
-router.get('/:id', requireTenantPermission(['all', 'knowledge_base:read']), getKnowledgeBaseEntry);
+router.get('/:id', requireTenantPermission(['all', 'knowledge_base']), getKnowledgeBaseEntry);
 
 // Create new knowledge base entry
 router.post('/', 
-  requireTenantPermission(['all', 'knowledge_base:create']), 
+  requireTenantPermission(['all', 'knowledge_base']), 
   upload.single('image'), 
   createKnowledgeBaseEntry
 );
 
 // Update knowledge base entry
 router.put('/:id', 
-  requireTenantPermission(['all', 'knowledge_base:update']), 
+  requireTenantPermission(['all', 'knowledge_base']), 
   upload.single('image'), 
   updateKnowledgeBaseEntry
 );
 
 // Delete knowledge base entry
-router.delete('/:id', requireTenantPermission(['all', 'knowledge_base:delete']), deleteKnowledgeBaseEntry);
+router.delete('/:id', requireTenantPermission(['all', 'knowledge_base']), deleteKnowledgeBaseEntry);
 
 // AI-powered search
-router.post('/search', requireTenantPermission(['all', 'knowledge_base:read']), aiSearch);
+router.post('/search', requireTenantPermission(['all', 'knowledge_base']), aiSearch);
 
 // AI-powered question answering
-router.post('/ask', requireTenantPermission(['all', 'knowledge_base:read']), async (req, res) => {
+router.post('/ask', requireTenantPermission(['all', 'knowledge_base']), async (req, res) => {
   try {
     const { question } = req.body;
     
@@ -98,7 +126,7 @@ router.post('/ask', requireTenantPermission(['all', 'knowledge_base:read']), asy
     console.error('Error in AI question answering:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Server error bij het beantwoorden van de vraag' 
+      message: 'Er is een fout opgetreden bij het verwerken van je vraag' 
     });
   }
 });
@@ -108,24 +136,5 @@ router.get('/meta/tags', requireTenantPermission(['all', 'knowledge:read', 'know
 
 // Get categories
 router.get('/meta/categories', requireTenantPermission(['all', 'knowledge:read', 'knowledge']), getCategories);
-
-// Serve uploaded images
-router.get('/images/:filename', requireTenantPermission(['all', 'knowledge:read', 'knowledge']), async (req, res) => {
-  try {
-    const { filename } = req.params;
-    const imagePath = path.join(__dirname, '../uploads/knowledge-base', filename);
-    
-    // Check if file exists
-    try {
-      await fs.access(imagePath);
-      res.sendFile(imagePath);
-    } catch (error) {
-      res.status(404).json({ success: false, message: 'Afbeelding niet gevonden' });
-    }
-  } catch (error) {
-    console.error('Error serving image:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
 
 module.exports = router; 

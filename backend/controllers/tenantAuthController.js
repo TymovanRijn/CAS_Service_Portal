@@ -436,43 +436,68 @@ const deleteTenantRole = async (req, res) => {
   }
 };
 
-// Get available permissions list
+// Get available permissions list - Simplified to just tabs/features
 const getAvailablePermissions = async (req, res) => {
   try {
-    // Define simplified permission groups for easier role management
+    // Simple tab-based permissions - just choose which tabs/features a role can access
     const availablePermissions = [
-      // System Level
-      { id: 'all', name: '🔓 Volledige Toegang', description: 'Alle rechten en functies', category: '🛡️ Systeem', isSpecial: true },
-      
-      // Core Features - Simplified
-      { id: 'dashboard:read', name: '📊 Dashboard Bekijken', description: 'Dashboard en statistieken bekijken', category: '📈 Dashboard' },
-      
-      { id: 'incidents:read', name: '👁️ Incidenten Bekijken', description: 'Incidenten inzien', category: '🚨 Incidenten' },
-      { id: 'incidents:create', name: '➕ Incidenten Aanmaken', description: 'Nieuwe incidenten rapporteren', category: '🚨 Incidenten' },
-      { id: 'incidents:update', name: '✏️ Incidenten Bewerken', description: 'Incidenten wijzigen en updaten', category: '🚨 Incidenten' },
-      { id: 'incidents', name: '🔧 Incidenten Volledig', description: 'Alle incident functies', category: '🚨 Incidenten', isGrouped: true },
-      
-      { id: 'actions:read', name: '👁️ Acties Bekijken', description: 'Acties en taken inzien', category: '⚡ Acties' },
-      { id: 'actions:create', name: '➕ Acties Aanmaken', description: 'Nieuwe acties creëren', category: '⚡ Acties' },
-      { id: 'actions:update', name: '🔄 Acties Oppakken', description: 'Acties overnemen en uitvoeren', category: '⚡ Acties' },
-      { id: 'actions', name: '🔧 Acties Volledig', description: 'Alle actie functies', category: '⚡ Acties', isGrouped: true },
-      
-      { id: 'reports', name: '📋 Rapporten', description: 'Rapporten en analyses bekijken', category: '📊 Rapporten' },
-      
-      { id: 'knowledge_base:read', name: '👁️ Kennisbank Bekijken', description: 'Kennisbank raadplegen', category: '📚 Kennisbank' },
-      { id: 'knowledge_base:create', name: '➕ Kennisbank Schrijven', description: 'Nieuwe artikelen toevoegen', category: '📚 Kennisbank' },
-      { id: 'knowledge_base:update', name: '✏️ Kennisbank Bewerken', description: 'Artikelen wijzigen', category: '📚 Kennisbank' },
-      { id: 'knowledge_base:delete', name: '🗑️ Kennisbank Verwijderen', description: 'Artikelen verwijderen', category: '📚 Kennisbank' },
-      
-      // Management Features
-      { id: 'categories:read', name: '👁️ Categorieën Bekijken', description: 'Categorieën inzien', category: '🏷️ Beheer' },
-      { id: 'categories:create', name: '➕ Categorieën Maken', description: 'Nieuwe categorieën aanmaken', category: '🏷️ Beheer' },
-      { id: 'locations:read', name: '👁️ Locaties Bekijken', description: 'Locaties inzien', category: '🏷️ Beheer' },
-      { id: 'locations:create', name: '➕ Locaties Maken', description: 'Nieuwe locaties aanmaken', category: '🏷️ Beheer' },
-      
-      { id: 'users:read', name: '👁️ Gebruikers Bekijken', description: 'Gebruikerslijst inzien', category: '👥 Gebruikers' },
-      { id: 'users:create', name: '➕ Gebruikers Aanmaken', description: 'Nieuwe gebruikers toevoegen', category: '👥 Gebruikers' },
-      { id: 'users:update', name: '✏️ Gebruikers Bewerken', description: 'Gebruikers wijzigen', category: '👥 Gebruikers' }
+      // Main Application Tabs
+      { 
+        id: 'dashboard', 
+        name: '📊 Dashboard', 
+        description: 'Dashboard en statistieken bekijken', 
+        category: '📱 Hoofdtabs',
+        icon: '📊'
+      },
+      { 
+        id: 'incidents', 
+        name: '🚨 Incidenten', 
+        description: 'Incidenten beheren en aanmaken', 
+        category: '📱 Hoofdtabs',
+        icon: '🚨'
+      },
+      { 
+        id: 'knowledge_base', 
+        name: '📚 Kennisbank', 
+        description: 'Kennisbank artikelen bekijken en bewerken', 
+        category: '📱 Hoofdtabs',
+        icon: '📚'
+      },
+      { 
+        id: 'actions', 
+        name: '⚡ Acties', 
+        description: 'Acties beheren en oppakken', 
+        category: '📱 Hoofdtabs',
+        icon: '⚡'
+      },
+      { 
+        id: 'admin', 
+        name: '⚙️ Admin Management', 
+        description: 'Gebruikers, categorieën en locaties beheren', 
+        category: '📱 Hoofdtabs',
+        icon: '⚙️'
+      },
+      { 
+        id: 'kpi_dashboard', 
+        name: '📈 KPI Dashboard', 
+        description: 'Prestatie-indicatoren en analytics', 
+        category: '📱 Hoofdtabs',
+        icon: '📈'
+      },
+      { 
+        id: 'reports', 
+        name: '📋 Rapporten', 
+        description: 'Analyses en rapporten bekijken', 
+        category: '📱 Hoofdtabs',
+        icon: '📋'
+      },
+      { 
+        id: 'ai_insights', 
+        name: '🤖 AI Insights', 
+        description: 'AI-gegenereerde inzichten', 
+        category: '📱 Hoofdtabs',
+        icon: '🤖'
+      }
     ];
     
     res.json({ permissions: availablePermissions });

@@ -8,9 +8,9 @@ const router = express.Router();
 router.use(tenantAuthAndValidationMiddleware);
 
 // Get available report dates
-router.get('/dates', requireTenantPermission(['all', 'reports', 'reports:read']), getAvailableReportDates);
+router.get('/dates', requireTenantPermission(['all', 'reports']), getAvailableReportDates);
 
 // Generate daily report (PDF download)
-router.get('/daily', requireTenantPermission(['all', 'reports', 'reports:read']), generateDailyReport);
+router.get('/daily', requireTenantPermission(['all', 'reports']), generateDailyReport);
 
 module.exports = router; 

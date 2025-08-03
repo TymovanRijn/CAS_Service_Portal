@@ -218,7 +218,6 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   const [editData, setEditData] = useState({
     title: '',
     description: '',
-    status: '',
     priority: '',
     category_id: '',
     location_id: '',
@@ -243,15 +242,14 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
     if (isOpen && incident) {
       fetchIncidentDetails();
       fetchDropdownData();
-      setEditData({
-        title: incident.title,
-        description: incident.description,
-        status: incident.status,
-        priority: incident.priority,
-        category_id: incident.category_id.toString(),
-        location_id: incident.location_id.toString(),
-        possible_solution: incident.possible_solution || ''
-      });
+          setEditData({
+      title: incident.title,
+      description: incident.description,
+      priority: incident.priority,
+      category_id: incident.category_id.toString(),
+      location_id: incident.location_id.toString(),
+      possible_solution: incident.possible_solution || ''
+    });
       setError('');
       setIsEditing(false);
     }
@@ -439,8 +437,8 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      {/* Mobile-first responsive modal */}
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
+      {/* Mobile-first responsive modal - Smaller and more compact */}
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden">
         {/* Header - Mobile optimized */}
         <div className="flex items-center justify-between p-3 sm:p-4 lg:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
@@ -488,7 +486,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
         </div>
 
         {/* Content - Mobile-first scrollable layout */}
-        <div className="overflow-y-auto max-h-[calc(98vh-120px)] sm:max-h-[calc(95vh-140px)]">
+        <div className="overflow-y-auto max-h-[calc(90vh-120px)] sm:max-h-[calc(85vh-140px)]">
           <div className="p-3 sm:p-4 lg:p-6">
             {/* Error message */}
             {error && (
@@ -780,9 +778,9 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Footer - Mobile optimized */}
+        {/* Footer - Mobile optimized with sticky positioning */}
         {isEditing && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3 p-3 sm:p-4 lg:p-6 border-t border-gray-200 bg-gray-50">
+          <div className="sticky bottom-0 flex flex-col sm:flex-row sm:items-center sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3 p-3 sm:p-4 lg:p-6 border-t border-gray-200 bg-gray-50 shadow-lg">
             <Button
               type="button"
               variant="outline"
@@ -793,7 +791,6 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                 setEditData({
                   title: incident.title,
                   description: incident.description,
-                  status: incident.status,
                   priority: incident.priority,
                   category_id: incident.category_id.toString(),
                   location_id: incident.location_id.toString(),
@@ -809,7 +806,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full sm:w-auto order-1 sm:order-2 touch-manipulation"
+              className="w-full sm:w-auto order-1 sm:order-2 touch-manipulation bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSaving ? (
                 <div className="flex items-center space-x-2">

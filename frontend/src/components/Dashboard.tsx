@@ -80,7 +80,7 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     
-    if (hasPermission(['dashboard:read', 'incidents:read', 'actions:read'])) {
+    if (hasPermission(['dashboard', 'incidents', 'actions'])) {
       fetchDashboardData();
     } else {
       setIsLoading(false);
@@ -277,7 +277,7 @@ export const Dashboard: React.FC = () => {
   }
 
       // Permission-based Dashboard - Show operational data for users with dashboard access
-    if (hasPermission(['dashboard:read', 'incidents:read', 'actions:read'])) {
+    if (hasPermission(['dashboard', 'incidents', 'actions'])) {
     return (
       <div className="space-y-4 sm:space-y-6">
           {/* Welcome Section - Mobile optimized */}
@@ -296,7 +296,7 @@ export const Dashboard: React.FC = () => {
           {/* Two Column Layout - Mobile optimized */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Left Column - Today's Incidents */}
-            {hasPermission(['incidents:read']) && (
+            {hasPermission(['incidents']) && (
             <Card className="mobile-card">
               <CardHeader className="p-4 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -304,7 +304,7 @@ export const Dashboard: React.FC = () => {
                     <CardTitle className="text-base sm:text-lg">Incidenten van Vandaag</CardTitle>
                     <CardDescription className="text-sm">Alle incidenten die vandaag zijn gemeld</CardDescription>
                   </div>
-                  {hasPermission(['incidents:create']) && (
+                  {hasPermission(['incidents']) && (
                   <Button size="sm" onClick={() => setIsCreateIncidentModalOpen(true)} className="mobile-btn-base w-full sm:w-auto">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -385,7 +385,7 @@ export const Dashboard: React.FC = () => {
             )}
 
             {/* Right Column - Pending Actions */}
-            {hasPermission(['actions:read']) && (
+            {hasPermission(['actions']) && (
             <Card className="mobile-card">
               <CardHeader className="p-4 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -393,7 +393,7 @@ export const Dashboard: React.FC = () => {
                     <CardTitle className="text-base sm:text-lg">Openstaande Acties</CardTitle>
                     <CardDescription className="text-sm">Acties die wachten op uitvoering</CardDescription>
                   </div>
-                  {hasPermission(['actions:create']) && (
+                  {hasPermission(['actions']) && (
                   <Button size="sm" onClick={() => setIsCreateActionModalOpen(true)} className="mobile-btn-base w-full sm:w-auto">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

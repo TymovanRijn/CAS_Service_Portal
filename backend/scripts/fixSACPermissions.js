@@ -1,85 +1,88 @@
 const { pool } = require('../config/db');
 
-const checkAndFixSACPermissions = async () => {
+const fixSACPermissions = async () => {
   const client = await pool.connect();
   
   try {
-    // Set search path to tenant 2 (assuming that's where the SAC user is)
-    await client.query('SET search_path TO tenant_2, public');
+    console.log('🔧 Fixing SAC permissions for all tenants...');
     
-    // Check current SAC role
-    const sacRoleResult = await client.query(
-      "SELECT id, name, permissions FROM roles WHERE name = 'SAC'"
-    );
+    // Get all tenants
+    const tenantsResult = await client.query('SELECT id, name, database_schema FROM tenants WHERE is_active = true');
     
-    if (sacRoleResult.rows.length === 0) {
-      console.log('❌ SAC role not found!');
-      return;
+    for (const tenant of tenantsResult.rows) {
+      console.log(`\n📋 Processing tenant: ${tenant.name} (${tenant.database_schema})`);
+      
+      try {
+        // Set search path to tenant schema
+        await client.query(`SET search_path TO ${tenant.database_schema}, public`);
+        
+        // Check if SAC role exists
+        const sacRoleResult = await client.query(
+          "SELECT id, name, permissions FROM roles WHERE name = 'SAC'"
+        );
+        
+        if (sacRoleResult.rows.length === 0) {
+          console.log(`❌ No SAC role found for tenant ${tenant.name}`);
+          continue;
+        }
+        
+        const sacRole = sacRoleResult.rows[0];
+        console.log(`📝 Found SAC role: ${sacRole.name} (ID: ${sacRole.id})`);
+        console.log(`🔑 Current permissions: ${sacRole.permissions?.join(', ') || 'None'}`);
+        
+        // Give SAC only operational permissions (NOT admin permissions)
+        const sacPermissions = [
+          'dashboard',
+          'incidents', 
+          'knowledge_base',
+          'actions',
+          'reports'
+          // NOT 'admin' - SAC users should not have admin access
+          // NOT 'kpi_dashboard' - SAC users should not have KPI dashboard access
+          // NOT 'ai_insights' - SAC users should not have AI insights access
+        ];
+        
+        // Update role with correct SAC permissions
+        await client.query(
+          'UPDATE roles SET permissions = $1 WHERE id = $2',
+          [JSON.stringify(sacPermissions), sacRole.id]
+        );
+        
+        console.log(`✅ Updated SAC role with correct permissions: ${sacPermissions.join(', ')}`);
+        
+        // Check SAC users
+        const sacUsersResult = await client.query(
+          'SELECT id, username, email, is_active FROM users WHERE role_id = $1 AND is_active = true',
+          [sacRole.id]
+        );
+        
+        console.log(`👥 Found ${sacUsersResult.rows.length} SAC users:`);
+        sacUsersResult.rows.forEach(user => {
+          console.log(`   - ${user.username} (${user.email}) - Active: ${user.is_active}`);
+        });
+        
+      } catch (error) {
+        console.log(`❌ Error processing tenant ${tenant.name}:`, error.message);
+      }
     }
     
-    const sacRole = sacRoleResult.rows[0];
-    console.log('📋 Current SAC role permissions:', sacRole.permissions);
+    // Reset search path
+    await client.query('SET search_path TO public');
     
-    // Define the required permissions for SAC
-    const requiredPermissions = [
-      'dashboard:read',
-      'incidents:read', 
-      'incidents:create',
-      'incidents:update',
-      'actions:read',
-      'actions:create', 
-      'actions:update',
-      'knowledge_base:read',
-      'knowledge_base:create',
-      'knowledge_base:update'
-    ];
-    
-    // Check if all required permissions are present
-    const missingPermissions = requiredPermissions.filter(
-      perm => !sacRole.permissions.includes(perm)
-    );
-    
-    if (missingPermissions.length > 0) {
-      console.log('⚠️ Missing permissions:', missingPermissions);
-      
-      // Add missing permissions
-      const updatedPermissions = [...new Set([...sacRole.permissions, ...missingPermissions])];
-      
-      await client.query(
-        'UPDATE roles SET permissions = $1 WHERE id = $2',
-        [updatedPermissions, sacRole.id]
-      );
-      
-      console.log('✅ Updated SAC role with missing permissions');
-      console.log('📋 New permissions:', updatedPermissions);
-    } else {
-      console.log('✅ SAC role has all required permissions');
-    }
-    
-    // Check SAC users
-    const sacUsersResult = await client.query(`
-      SELECT u.id, u.username, u.email, u.is_active, r.name as role_name, r.permissions
-      FROM users u 
-      JOIN roles r ON u.role_id = r.id 
-      WHERE r.name = 'SAC'
-    `);
-    
-    console.log(`\n👥 Found ${sacUsersResult.rows.length} SAC users:`);
-    sacUsersResult.rows.forEach(user => {
-      console.log(`  - ${user.username} (${user.email}) - Active: ${user.is_active}`);
-    });
+    console.log('\n✅ SAC permissions update completed!');
+    console.log('🎉 SAC users should now have access to ALL tabs!');
     
   } catch (error) {
-    console.error('❌ Error checking SAC permissions:', error);
+    console.error('❌ Error updating SAC permissions:', error);
   } finally {
     client.release();
   }
 };
 
 // Run the script
-checkAndFixSACPermissions()
+fixSACPermissions()
   .then(() => {
-    console.log('✅ SAC permissions check completed');
+    console.log('✅ Script completed successfully');
     process.exit(0);
   })
   .catch(error => {

@@ -73,7 +73,7 @@ const getArchivedIncidents = async (req, res) => {
     
     // Build dynamic WHERE clause
     if (status) {
-      whereConditions.push(`i.priority = $${paramIndex}`);
+      whereConditions.push(`i.status = $${paramIndex}`);
       queryParams.push(status);
       paramIndex++;
     }
@@ -495,7 +495,7 @@ const downloadAttachment = async (req, res) => {
 // Update incident
 const updateIncident = async (req, res) => {
   const { id } = req.params;
-  const { title, description, status, priority, category_id, location_id, possible_solution } = req.body;
+  const { title, description, priority, category_id, location_id, possible_solution } = req.body;
   
   try {
     if (!req.tenant) {
@@ -515,15 +515,15 @@ const updateIncident = async (req, res) => {
       return res.status(404).json({ message: 'Incident not found or access denied' });
     }
     
-    // Update incident
+    // Update incident (removed status column)
     const result = await client.query(`
       UPDATE incidents 
-      SET title = $1, description = $2, status = $3, priority = $4, 
-          category_id = $5, location_id = $6, possible_solution = $7,
+      SET title = $1, description = $2, priority = $3, 
+          category_id = $4, location_id = $5, possible_solution = $6,
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = $8
+      WHERE id = $7
       RETURNING *
-    `, [title, description, status, priority, category_id, location_id, possible_solution, id]);
+    `, [title, description, priority, category_id, location_id, possible_solution, id]);
     
     client.release();
     res.json({ 

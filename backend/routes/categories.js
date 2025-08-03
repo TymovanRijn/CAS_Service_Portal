@@ -14,19 +14,19 @@ const router = express.Router();
 // All routes require tenant authentication and validation
 router.use(tenantAuthAndValidationMiddleware);
 
-// Get categories
-router.get('/', requireTenantPermission(['all', 'categories:read', 'categories']), getCategories);
+// Get categories - accessible to ALL authenticated users
+router.get('/', getCategories);
 
-// Get category statistics
-router.get('/stats', requireTenantPermission(['all', 'categories:read', 'categories']), getCategoryStats);
+// Get category statistics - accessible to ALL authenticated users
+router.get('/stats', getCategoryStats);
 
-// Create category
-router.post('/', requireTenantPermission(['all', 'categories:create', 'categories']), createCategory);
+// Create category - admin only
+router.post('/', requireTenantPermission(['all', 'admin']), createCategory);
 
-// Update category
-router.put('/:id', requireTenantPermission(['all', 'categories:update', 'categories']), updateCategory);
+// Update category - admin only
+router.put('/:id', requireTenantPermission(['all', 'admin']), updateCategory);
 
-// Delete category
-router.delete('/:id', requireTenantPermission(['all', 'categories:delete', 'categories']), deleteCategory);
+// Delete category - admin only
+router.delete('/:id', requireTenantPermission(['all', 'admin']), deleteCategory);
 
 module.exports = router; 

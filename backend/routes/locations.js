@@ -12,16 +12,16 @@ const router = express.Router();
 // All routes require tenant authentication and validation
 router.use(tenantAuthAndValidationMiddleware);
 
-// Get all locations
-router.get('/', requireTenantPermission(['all', 'locations:read', 'categories', 'incidents']), getLocations);
+// Get all locations - accessible to ALL authenticated users
+router.get('/', getLocations);
 
-// Create location
-router.post('/', requireTenantPermission(['all', 'locations:create', 'categories']), createLocation);
+// Create location - admin only
+router.post('/', requireTenantPermission(['all', 'admin']), createLocation);
 
-// Update location
-router.put('/:id', requireTenantPermission(['all', 'locations:update', 'categories']), updateLocation);
+// Update location - admin only
+router.put('/:id', requireTenantPermission(['all', 'admin']), updateLocation);
 
-// Delete location
-router.delete('/:id', requireTenantPermission(['all', 'locations:delete', 'categories']), deleteLocation);
+// Delete location - admin only
+router.delete('/:id', requireTenantPermission(['all', 'admin']), deleteLocation);
 
 module.exports = router;

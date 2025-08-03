@@ -312,7 +312,7 @@ const KnowledgeBase: React.FC = () => {
       />
 
       {/* Search and Filters - Mobile optimized */}
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-100 mb-6 sm:mb-8">
         <div className="flex flex-col gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -405,7 +405,7 @@ const KnowledgeBase: React.FC = () => {
 
       {/* Content Grid - Mobile optimized */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="p-4 sm:p-6 animate-pulse mobile-card">
               <div className="h-4 bg-gray-200 rounded mb-4"></div>
@@ -419,7 +419,7 @@ const KnowledgeBase: React.FC = () => {
           ))}
         </div>
       ) : entries.length === 0 ? (
-        <div className="text-center py-8 sm:py-12">
+        <div className="text-center py-8 sm:py-12 mt-6 sm:mt-8">
           <BookOpen className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">Geen artikelen gevonden</h3>
           <p className="text-sm sm:text-base text-gray-500 mb-6">
@@ -437,7 +437,7 @@ const KnowledgeBase: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 mt-6 sm:mt-8">
             {entries.map((entry) => (
               <Card 
                 key={entry.id} 
@@ -450,9 +450,14 @@ const KnowledgeBase: React.FC = () => {
                 {entry.image_path && (
                   <div className="h-32 sm:h-48 bg-gradient-to-r from-blue-400 to-purple-500 rounded-t-xl relative overflow-hidden">
                     <img 
-                      src={`${API_BASE_URL}/knowledge-base/images/${entry.image_path.split('/').pop()}`}
+                      src={`${API_BASE_URL}/knowledge-base/images/${entry.image_path}`}
                       alt={entry.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        // Fallback to gradient if image fails to load
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)';
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
