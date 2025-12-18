@@ -190,6 +190,21 @@ async function setupDatabase() {
       )
     `);
     
+    // Create KnowledgeBaseArticles table
+    console.log('📚 Creating KnowledgeBaseArticles table...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS KnowledgeBaseArticles (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'Algemeen',
+        author_id INTEGER REFERENCES Users(id),
+        author_name VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
     // Create indexes for better performance
     console.log('🔍 Creating indexes...');
     await client.query(`
@@ -197,6 +212,8 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_incidents_status ON Incidents(status);
       CREATE INDEX IF NOT EXISTS idx_actions_status ON Actions(status);
       CREATE INDEX IF NOT EXISTS idx_actions_assigned_to ON Actions(assigned_to);
+      CREATE INDEX IF NOT EXISTS idx_knowledgebase_created_at ON KnowledgeBaseArticles(created_at);
+      CREATE INDEX IF NOT EXISTS idx_knowledgebase_role ON KnowledgeBaseArticles(role);
     `);
     
     console.log('✅ Database setup completed successfully!');
@@ -212,6 +229,7 @@ async function setupDatabase() {
     console.log('- BakInventory');
     console.log('- AuditLogs');
     console.log('- KPIRecords');
+    console.log('- KnowledgeBaseArticles');
     console.log('');
     console.log('Next steps:');
     console.log('1. Run: node scripts/createTestUsers.js');

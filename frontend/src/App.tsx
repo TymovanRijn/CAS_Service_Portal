@@ -6,6 +6,7 @@ import { Archive } from './components/Archive';
 import { ActionManagement } from './components/ActionManagement';
 import { Reports } from './components/Reports';
 import { AIInsights } from './components/AIInsights';
+import { AIKennisbank } from './components/AIKennisbank';
 import { AdminManagement } from './components/AdminManagement';
 import { KPIDashboard } from './components/KPIDashboard';
 import { Navigation } from './components/Navigation';
@@ -54,6 +55,8 @@ const AppContent: React.FC = () => {
         return <Reports />;
       case 'ai-insights':
         return <AIInsights />;
+      case 'ai-kennisbank':
+        return <AIKennisbank />;
       case 'kpi-dashboard':
         return <KPIDashboard />;
       default:
