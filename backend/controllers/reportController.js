@@ -115,28 +115,149 @@ const generateDailyReport = async (req, res) => {
       locationBreakdown
     });
 
-    // Generate PDF using Puppeteer
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    // Generate PDF using Puppeteer with retry mechanism
+    let browser;
+    let page;
+    let pdfBuffer;
+    const maxRetries = 1; // Reduce retries to fail faster
     
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20mm',
-        right: '15mm',
-        bottom: '20mm',
-        left: '15mm'
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Starting PDF generation (attempt ${attempt}/${maxRetries})...`);
+        
+        // Use minimal, stable configuration
+        browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage'
+          ],
+          timeout: 30000
+        });
+        
+        console.log('Browser launched successfully');
+        
+        page = await browser.newPage();
+        
+        // Disable JavaScript to prevent crashes
+        await page.setJavaScriptEnabled(false);
+        
+        // Set viewport
+        await page.setViewport({
+          width: 1920,
+          height: 1080,
+          deviceScaleFactor: 1
+        });
+        
+        console.log('Setting HTML content (length:', htmlContent.length, ')...');
+        
+        // Set content with simple wait condition
+        await page.setContent(htmlContent, {
+          waitUntil: 'load',
+          timeout: 30000
+        });
+        
+        console.log('Content loaded, waiting for rendering...');
+        
+        // Short wait for rendering
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('Generating PDF...');
+        
+        // Generate PDF with timeout
+        pdfBuffer = await Promise.race([
+          page.pdf({
+            format: 'A4',
+            printBackground: true,
+            landscape: true,
+            margin: {
+              top: '10mm',
+              right: '10mm',
+              bottom: '10mm',
+              left: '10mm'
+            }
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('PDF generation timeout after 30 seconds')), 30000)
+          )
+        ]);
+        
+        console.log('PDF generated successfully, size:', pdfBuffer ? pdfBuffer.length : 0);
+        
+        // Success - break out of retry loop
+        break;
+        
+      } catch (attemptError) {
+        console.error(`Attempt ${attempt} failed:`, attemptError.message);
+        
+        // Clean up failed attempt quickly
+        try {
+          if (page) {
+            try {
+              if (!page.isClosed()) {
+                await Promise.race([
+                  page.close(),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+                ]).catch(() => {});
+              }
+            } catch (e) {
+              // Ignore
+            }
+            page = null;
+          }
+        } catch (e) {
+          // Ignore
+        }
+        
+        try {
+          if (browser) {
+            await Promise.race([
+              browser.close(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+            ]).catch(() => {});
+            browser = null;
+          }
+        } catch (e) {
+          // Ignore
+        }
+        
+        // If last attempt, throw error
+        if (attempt === maxRetries) {
+          throw new Error(`PDF generation failed after ${maxRetries} attempts: ${attemptError.message}`);
+        }
+        
+        // No retry wait needed if maxRetries is 1
+        if (attempt < maxRetries) {
+          console.log(`Waiting 1 second before retry (attempt ${attempt + 1}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-    });
+    }
     
-    await browser.close();
-
+    if (!pdfBuffer) {
+      throw new Error('Failed to generate PDF buffer after all attempts');
+    }
+    
+    console.log('PDF generated successfully, size:', pdfBuffer.length);
+    
+    // Clean up before sending response
+    try {
+      if (page && !page.isClosed()) {
+        await page.close().catch(() => {});
+      }
+    } catch (e) {
+      console.error('Error closing page:', e);
+    }
+    
+    try {
+      if (browser) {
+        await browser.close();
+      }
+    } catch (e) {
+      console.error('Error closing browser:', e);
+    }
+    
     // Set response headers for PDF download
     const filename = `CAS_Dagrapport_${date.replace(/-/g, '_')}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
@@ -147,7 +268,7 @@ const generateDailyReport = async (req, res) => {
 
   } catch (err) {
     console.error('Error generating daily report:', err);
-    res.status(500).json({ message: 'Error generating daily report' });
+    res.status(500).json({ message: 'Error generating daily report', error: err.message });
   }
 };
 
@@ -221,135 +342,199 @@ const generateReportHTML = ({ date, incidents, actions, stats, categoryBreakdown
         }
         
         .header {
-          background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+          background: #1e40af;
           color: white;
-          padding: 30px;
+          padding: 20px;
           text-align: center;
-          margin-bottom: 30px;
+          margin-bottom: 20px;
         }
         
         .header h1 {
-          font-size: 28px;
+          font-size: 24px;
           font-weight: 700;
-          margin-bottom: 10px;
+          margin-bottom: 8px;
         }
         
         .header p {
-          font-size: 18px;
+          font-size: 16px;
           opacity: 0.9;
         }
         
         .container {
-          max-width: 1200px;
+          max-width: 100%;
           margin: 0 auto;
-          padding: 0 20px;
+          padding: 0 10px;
         }
         
         .stats-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 20px;
-          margin-bottom: 40px;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 12px;
+          margin-bottom: 24px;
         }
         
         .stat-card {
           background: #f8fafc;
           border: 1px solid #e2e8f0;
           border-radius: 8px;
-          padding: 20px;
+          padding: 16px;
           text-align: center;
         }
         
         .stat-number {
-          font-size: 32px;
+          font-size: 28px;
           font-weight: 700;
           color: #1e40af;
-          margin-bottom: 5px;
+          margin-bottom: 4px;
         }
         
         .stat-label {
-          font-size: 14px;
+          font-size: 12px;
           color: #64748b;
           font-weight: 500;
         }
         
         .section {
-          margin-bottom: 40px;
+          margin-bottom: 32px;
         }
         
         .section-title {
-          font-size: 20px;
-          font-weight: 600;
+          font-size: 18px;
+          font-weight: 700;
           color: #1e293b;
           margin-bottom: 20px;
           padding-bottom: 10px;
-          border-bottom: 2px solid #e2e8f0;
+          border-bottom: 3px solid #3b82f6;
         }
         
+        /* Card-based layout for incidents and actions */
+        .incidents-list, .actions-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        
+        .incident-card, .action-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+          page-break-inside: avoid;
+          margin-bottom: 16px;
+        }
+        
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .card-title-section {
+          flex: 1;
+          margin-right: 16px;
+        }
+        
+        .card-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 8px;
+          line-height: 1.3;
+        }
+        
+        .card-description {
+          font-size: 13px;
+          color: #64748b;
+          line-height: 1.6;
+          margin-top: 8px;
+        }
+        
+        .card-badges {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: flex-end;
+        }
+        
+        .priority-badge, .status-badge {
+          display: inline-block;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          color: white;
+          text-transform: uppercase;
+          white-space: nowrap;
+          letter-spacing: 0.5px;
+        }
+        
+        .card-details {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+          margin-top: 16px;
+        }
+        
+        .detail-item {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .detail-label {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 6px;
+        }
+        
+        .detail-value {
+          font-size: 14px;
+          color: #1e293b;
+          font-weight: 500;
+        }
+        
+        .card-time {
+          font-size: 12px;
+          color: #94a3b8;
+          font-weight: 500;
+          margin-bottom: 12px;
+        }
+        
+        /* Legacy table styles for backwards compatibility */
         .table {
           width: 100%;
           border-collapse: collapse;
           background: white;
           border-radius: 8px;
-          overflow: hidden;
+          overflow: visible;
           box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .table th {
-          background: #f1f5f9;
-          padding: 12px;
-          text-align: left;
-          font-weight: 600;
-          color: #334155;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .table td {
-          padding: 12px;
-          border-bottom: 1px solid #f1f5f9;
-          vertical-align: top;
-        }
-        
-        .table tr:last-child td {
-          border-bottom: none;
-        }
-        
-        .priority-badge, .status-badge {
-          display: inline-block;
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          font-weight: 500;
-          color: white;
-          text-transform: uppercase;
-        }
-        
-        .description {
-          max-width: 300px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
         
         .breakdown-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 30px;
-          margin-bottom: 30px;
+          gap: 20px;
+          margin-bottom: 24px;
         }
         
         .breakdown-card {
           background: #f8fafc;
           border: 1px solid #e2e8f0;
           border-radius: 8px;
-          padding: 20px;
+          padding: 16px;
         }
         
         .breakdown-title {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
           color: #1e293b;
-          margin-bottom: 15px;
+          margin-bottom: 12px;
         }
         
         .breakdown-item {
@@ -390,13 +575,19 @@ const generateReportHTML = ({ date, incidents, actions, stats, categoryBreakdown
             page-break-inside: avoid;
           }
           
-          .table {
-            page-break-inside: auto;
+          .incident-card, .action-card {
+            page-break-inside: avoid;
+            page-break-after: auto;
           }
           
-          .table tr {
+          .card-header {
             page-break-inside: avoid;
           }
+        }
+        
+        /* Ensure all content is visible */
+        body {
+          overflow: visible;
         }
       </style>
     </head>
@@ -482,45 +673,47 @@ const generateReportHTML = ({ date, incidents, actions, stats, categoryBreakdown
         <div class="section">
           <h2 class="section-title">🚨 Incidenten van ${formatDate(date)}</h2>
           ${incidents.length > 0 ? `
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Tijd</th>
-                  <th>Titel</th>
-                  <th>Prioriteit</th>
-                  <th>Status</th>
-                  <th>Categorie</th>
-                  <th>Locatie</th>
-                  <th>Aangemaakt door</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${incidents.map(incident => `
-                  <tr>
-                    <td>${formatTime(incident.created_at)}</td>
-                    <td>
-                      <strong>${incident.title}</strong>
-                      <div class="description" style="font-size: 12px; color: #64748b; margin-top: 4px;">
-                        ${incident.description}
-                      </div>
-                    </td>
-                    <td>
+            <div class="incidents-list">
+              ${incidents.map(incident => `
+                <div class="incident-card">
+                  <div class="card-time">🕐 ${formatTime(incident.created_at)}</div>
+                  <div class="card-header">
+                    <div class="card-title-section">
+                      <div class="card-title">${incident.title}</div>
+                      ${incident.description ? `
+                        <div class="card-description">${incident.description}</div>
+                      ` : ''}
+                    </div>
+                    <div class="card-badges">
                       <span class="priority-badge" style="background-color: ${getPriorityColor(incident.priority)};">
                         ${incident.priority}
                       </span>
-                    </td>
-                    <td>
                       <span class="status-badge" style="background-color: ${getStatusColor(incident.status)};">
                         ${incident.status}
                       </span>
-                    </td>
-                    <td>${incident.category_name || '-'}</td>
-                    <td>${incident.location_name || '-'}</td>
-                    <td>${incident.created_by_name || '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <div class="card-details">
+                    <div class="detail-item">
+                      <div class="detail-label">Categorie</div>
+                      <div class="detail-value">${incident.category_name || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">Locatie</div>
+                      <div class="detail-value">${incident.location_name || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">Aangemaakt door</div>
+                      <div class="detail-value">${incident.created_by_name || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">Datum & Tijd</div>
+                      <div class="detail-value">${formatDateTime(incident.created_at)}</div>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
           ` : '<div class="no-data">Geen incidenten geregistreerd op deze dag</div>'}
         </div>
 
@@ -528,46 +721,55 @@ const generateReportHTML = ({ date, incidents, actions, stats, categoryBreakdown
         <div class="section">
           <h2 class="section-title">⚡ Acties van ${formatDate(date)}</h2>
           ${actions.length > 0 ? `
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Tijd</th>
-                  <th>Incident</th>
-                  <th>Actie Beschrijving</th>
-                  <th>Status</th>
-                  <th>Toegewezen aan</th>
-                  <th>Aangemaakt door</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${actions.map(action => `
-                  <tr>
-                    <td>${formatTime(action.created_at)}</td>
-                    <td>
-                      <strong>${action.incident_title}</strong>
-                      <div style="font-size: 12px; color: #64748b;">
-                        <span class="priority-badge" style="background-color: ${getPriorityColor(action.incident_priority)}; font-size: 10px;">
-                          ${action.incident_priority}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="description">
-                        ${action.action_description}
-                      </div>
-                    </td>
-                    <td>
+            <div class="actions-list">
+              ${actions.map(action => `
+                <div class="action-card">
+                  <div class="card-time">🕐 ${formatTime(action.created_at)}</div>
+                  <div class="card-header">
+                    <div class="card-title-section">
+                      <div class="card-title">${action.action_description || 'Geen beschrijving'}</div>
+                      ${action.incident_title ? `
+                        <div class="card-description">
+                          <strong>Gerelateerd incident:</strong> ${action.incident_title}
+                          ${action.incident_priority ? `
+                            <span class="priority-badge" style="background-color: ${getPriorityColor(action.incident_priority)}; margin-left: 8px; font-size: 9px; padding: 3px 8px;">
+                              ${action.incident_priority}
+                            </span>
+                          ` : ''}
+                        </div>
+                      ` : ''}
+                    </div>
+                    <div class="card-badges">
                       <span class="status-badge" style="background-color: ${getStatusColor(action.status)};">
                         ${action.status === 'Pending' ? 'Openstaand' : 
-                          action.status === 'In Progress' ? 'In Behandeling' : 'Voltooid'}
+                          action.status === 'In Progress' ? 'In Behandeling' : 
+                          action.status === 'Completed' ? 'Voltooid' : action.status}
                       </span>
-                    </td>
-                    <td>${action.assigned_to_name || 'Niet toegewezen'}</td>
-                    <td>${action.created_by_name || '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <div class="card-details">
+                    <div class="detail-item">
+                      <div class="detail-label">Toegewezen aan</div>
+                      <div class="detail-value">${action.assigned_to_name || 'Niet toegewezen'}</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">Aangemaakt door</div>
+                      <div class="detail-value">${action.created_by_name || '-'}</div>
+                    </div>
+                    ${action.incident_title ? `
+                      <div class="detail-item">
+                        <div class="detail-label">Categorie</div>
+                        <div class="detail-value">${action.category_name || '-'}</div>
+                      </div>
+                      <div class="detail-item">
+                        <div class="detail-label">Locatie</div>
+                        <div class="detail-value">${action.location_name || '-'}</div>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
           ` : '<div class="no-data">Geen acties geregistreerd op deze dag</div>'}
         </div>
       </div>
