@@ -93,19 +93,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
+      if (!response.ok) {
+        // Try to parse error message, but handle if response is not JSON
+        let errorMessage = 'Login failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        return { success: false, message: errorMessage };
+      }
+
       const data = await response.json();
 
-      if (response.ok) {
+      if (data.token && data.user) {
         localStorage.setItem('token', data.token);
         setToken(data.token);
         setUser(data.user);
         return { success: true, message: data.message || 'Login successful' };
       } else {
-        return { success: false, message: data.message || 'Login failed' };
+        return { success: false, message: 'Invalid response from server' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, message: 'Network error. Please try again.' };
+      const errorMessage = error instanceof Error 
+        ? `Network error: ${error.message}` 
+        : 'Network error. Please check if the backend server is running.';
+      return { success: false, message: errorMessage };
     }
   };
 

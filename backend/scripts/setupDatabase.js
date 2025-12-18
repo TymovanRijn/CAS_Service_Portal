@@ -46,8 +46,15 @@ async function setupDatabase() {
       CREATE TABLE IF NOT EXISTS Categories (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) UNIQUE NOT NULL,
-        description TEXT
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+    
+    // Add created_at column if it doesn't exist
+    await client.query(`
+      ALTER TABLE Categories 
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     `);
     
     // Create Locations table
@@ -56,8 +63,15 @@ async function setupDatabase() {
       CREATE TABLE IF NOT EXISTS Locations (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) UNIQUE NOT NULL,
-        description TEXT
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+    
+    // Add created_at column if it doesn't exist
+    await client.query(`
+      ALTER TABLE Locations 
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     `);
     
     // Create Incidents table

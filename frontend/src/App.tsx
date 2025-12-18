@@ -42,24 +42,10 @@ const AppContent: React.FC = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
-      case 'archive':
-        return <Archive />;
       case 'incidents':
-        return (
-          <div className="space-y-4 sm:space-y-6">
-            <div className="px-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Incident Beheer</h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">Beheer alle incidenten en acties</p>
-            </div>
-            <div className="text-center py-8 sm:py-12 text-gray-500 px-4">
-              <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <h3 className="text-base sm:text-lg font-medium mb-2">Incident Beheer</h3>
-              <p className="text-sm sm:text-base">Geavanceerde incident beheer functionaliteit komt binnenkort...</p>
-            </div>
-          </div>
-        );
+        return <Archive />;
+      case 'archive':
+        return <Archive />; // Keep for backwards compatibility
       case 'actions':
         return <ActionManagement />;
       case 'admin':

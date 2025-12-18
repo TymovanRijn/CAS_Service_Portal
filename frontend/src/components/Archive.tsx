@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { IncidentDetailModal } from './IncidentDetailModal';
+import { CreateIncidentModal } from './CreateIncidentModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -55,6 +56,7 @@ export const Archive: React.FC = () => {
   const [error, setError] = useState('');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isIncidentDetailModalOpen, setIsIncidentDetailModalOpen] = useState(false);
+  const [isCreateIncidentModalOpen, setIsCreateIncidentModalOpen] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -203,6 +205,11 @@ export const Archive: React.FC = () => {
     setSelectedIncident(null);
   };
 
+  const handleIncidentCreated = () => {
+    fetchIncidents();
+    setIsCreateIncidentModalOpen(false);
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
       case 'high': return 'text-red-600 bg-red-50 border-red-200';
@@ -234,9 +241,17 @@ export const Archive: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Incident Archief</h1>
-        <p className="text-gray-600">Bekijk en zoek historische incidenten</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Incidenten</h1>
+          <p className="text-gray-600">Beheer en bekijk alle incidenten</p>
+        </div>
+        <Button onClick={() => setIsCreateIncidentModalOpen(true)} className="flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Nieuw Incident
+        </Button>
       </div>
 
       {/* Filters */}
@@ -545,6 +560,13 @@ export const Archive: React.FC = () => {
           setSelectedIncident(null);
         }}
         onIncidentUpdated={handleIncidentUpdated}
+      />
+
+      {/* Create Incident Modal */}
+      <CreateIncidentModal
+        isOpen={isCreateIncidentModalOpen}
+        onClose={() => setIsCreateIncidentModalOpen(false)}
+        onIncidentCreated={handleIncidentCreated}
       />
     </div>
   );

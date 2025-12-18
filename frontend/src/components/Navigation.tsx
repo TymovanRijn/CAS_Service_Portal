@@ -69,18 +69,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           ),
-          description: 'Beheer incidenten',
-          roles: ['SAC', 'Admin']
-        },
-        {
-          id: 'archive',
-          name: 'Archief',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-            </svg>
-          ),
-          description: 'Historische incidenten',
+          description: 'Beheer alle incidenten',
           roles: ['SAC', 'Admin']
         },
         {
