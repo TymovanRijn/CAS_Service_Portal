@@ -718,3 +718,4 @@ export const AIKennisbank: React.FC = () => {
     </div>
   );
 };
+

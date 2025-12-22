@@ -21,3 +21,4 @@ router.post('/articles', createArticle);
 router.post('/oracle', askOracle);
 
 module.exports = router;
+
