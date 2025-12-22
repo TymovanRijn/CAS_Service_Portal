@@ -401,6 +401,7 @@ export const AdminManagement: React.FC = () => {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             user.role_name === 'Admin' ? 'bg-red-100 text-red-800' :
                             user.role_name === 'SAC' ? 'bg-blue-100 text-blue-800' :
+                            user.role_name === 'Stakeholder' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             {user.role_name}

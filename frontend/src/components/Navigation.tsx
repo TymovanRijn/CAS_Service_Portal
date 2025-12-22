@@ -55,7 +55,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Overzicht van vandaag',
-        roles: ['SAC', 'Admin', 'Dashboard Viewer']
+        roles: ['SAC', 'Admin', 'Stakeholder']
       }
     ];
 
@@ -103,7 +103,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
       );
     }
 
-    if (user.role_name === 'Dashboard Viewer' || user.role_name === 'Admin') {
+    if (user.role_name === 'Stakeholder' || user.role_name === 'Admin') {
       baseItems.push(
         {
           id: 'kpi-dashboard',
@@ -114,7 +114,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
             </svg>
           ),
           description: 'Prestatie-indicatoren en analytics',
-          roles: ['Dashboard Viewer', 'Admin']
+          roles: ['Stakeholder', 'Admin']
         },
         {
           id: 'reports',
@@ -125,7 +125,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
             </svg>
           ),
           description: 'Analyses en rapporten',
-          roles: ['Dashboard Viewer', 'Admin']
+          roles: ['Stakeholder', 'Admin']
         }
       );
     }
@@ -141,7 +141,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'AI-gegenereerde inzichten',
-        roles: ['SAC', 'Admin', 'Dashboard Viewer']
+        roles: ['SAC', 'Admin', 'Stakeholder']
       },
       {
         id: 'ai-kennisbank',
@@ -152,7 +152,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           </svg>
         ),
         description: 'Kennisbank en AI Orakel',
-        roles: ['SAC', 'Admin', 'Dashboard Viewer']
+        roles: ['SAC', 'Admin', 'Stakeholder']
       }
     );
 
@@ -165,7 +165,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
     switch (role) {
       case 'Admin': return 'bg-red-100 text-red-800 border-red-200';
       case 'SAC': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Dashboard Viewer': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Stakeholder': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };

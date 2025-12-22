@@ -20,7 +20,7 @@ router.use(authMiddleware);
 router.get('/test', testAI);
 
 // Get real-time AI insights for dashboard (cached)
-router.get('/insights', requireRole(['SAC', 'Admin', 'Dashboard Viewer']), getAIInsights);
+router.get('/insights', requireRole(['SAC', 'Admin', 'Stakeholder']), getAIInsights);
 
 // Force refresh AI insights (manual refresh)
 router.post('/insights/refresh', requireRole(['SAC', 'Admin']), forceRefreshAIInsights);
@@ -28,12 +28,12 @@ router.post('/insights/refresh', requireRole(['SAC', 'Admin']), forceRefreshAIIn
 // Get AI insights cache status (for debugging)
 router.get('/insights/status', requireRole(['Admin']), getAIInsightsCacheStatus);
 
-// Monthly summary routes (Admin and Dashboard Viewer only)
-router.get('/summaries', requireRole(['Admin', 'Dashboard Viewer']), getAISummaries);
-router.get('/summaries/:month', requireRole(['Admin', 'Dashboard Viewer']), getAISummaryByMonth);
+// Monthly summary routes (Admin and Stakeholder only)
+router.get('/summaries', requireRole(['Admin', 'Stakeholder']), getAISummaries);
+router.get('/summaries/:month', requireRole(['Admin', 'Stakeholder']), getAISummaryByMonth);
 router.post('/summaries/generate', requireRole(['Admin']), generateMonthlySummary);
 
-// PDF serving route (Admin and Dashboard Viewer only)
-router.get('/summaries/:month/pdf', requireRole(['Admin', 'Dashboard Viewer']), servePDF);
+// PDF serving route (Admin and Stakeholder only)
+router.get('/summaries/:month/pdf', requireRole(['Admin', 'Stakeholder']), servePDF);
 
 module.exports = router; 
