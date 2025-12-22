@@ -8,6 +8,7 @@ const reportRoutes = require('./routes/reports');
 const aiRoutes = require('./routes/ai');
 const userRoutes = require('./routes/users');
 const kennisbankRoutes = require('./routes/kennisbank');
+const scheduleRoutes = require('./routes/schedules');
 const cors = require('cors');
 
 const app = express();
@@ -74,6 +75,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/admin', userRoutes);
 app.use('/api', categoryRoutes);
 app.use('/api/kennisbank', kennisbankRoutes);
+app.use('/api/schedules', scheduleRoutes);
 
 // Listen on all interfaces (0.0.0.0) for network access
 app.listen(port, '0.0.0.0', () => {

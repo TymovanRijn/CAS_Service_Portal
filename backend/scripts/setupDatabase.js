@@ -205,6 +205,33 @@ async function setupDatabase() {
       )
     `);
     
+    // Create Schedules table
+    console.log('📅 Creating Schedules table...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS Schedules (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES Users(id) ON DELETE CASCADE,
+        date DATE NOT NULL,
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        notes TEXT,
+        created_by INTEGER REFERENCES Users(id),
+        approved_by INTEGER REFERENCES Users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_user_date_time UNIQUE(user_id, date, start_time, end_time)
+      )
+    `);
+    
+    // Add columns to existing Schedules table if they don't exist
+    await client.query(`
+      ALTER TABLE Schedules 
+      ADD COLUMN IF NOT EXISTS notes TEXT,
+      ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES Users(id),
+      ADD COLUMN IF NOT EXISTS approved_by INTEGER REFERENCES Users(id)
+    `);
+    
     // Create indexes for better performance
     console.log('🔍 Creating indexes...');
     await client.query(`
@@ -214,6 +241,9 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_actions_assigned_to ON Actions(assigned_to);
       CREATE INDEX IF NOT EXISTS idx_knowledgebase_created_at ON KnowledgeBaseArticles(created_at);
       CREATE INDEX IF NOT EXISTS idx_knowledgebase_role ON KnowledgeBaseArticles(role);
+      CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON Schedules(user_id);
+      CREATE INDEX IF NOT EXISTS idx_schedules_date ON Schedules(date);
+      CREATE INDEX IF NOT EXISTS idx_schedules_status ON Schedules(status);
     `);
     
     console.log('✅ Database setup completed successfully!');
@@ -230,6 +260,7 @@ async function setupDatabase() {
     console.log('- AuditLogs');
     console.log('- KPIRecords');
     console.log('- KnowledgeBaseArticles');
+    console.log('- Schedules');
     console.log('');
     console.log('Next steps:');
     console.log('1. Run: node scripts/createTestUsers.js');

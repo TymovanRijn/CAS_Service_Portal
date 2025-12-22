@@ -10,6 +10,8 @@ import { AIKennisbank } from './components/AIKennisbank';
 import { AdminManagement } from './components/AdminManagement';
 import { KPIDashboard } from './components/KPIDashboard';
 import { Navigation } from './components/Navigation';
+import { Schedule } from './components/Schedule';
+import { AdminSchedule } from './components/AdminSchedule';
 
 // Main App Content Component
 const AppContent: React.FC = () => {
@@ -51,6 +53,8 @@ const AppContent: React.FC = () => {
         return <ActionManagement />;
       case 'admin':
         return <AdminManagement />;
+      case 'schedule':
+        return user?.role_name === 'Admin' ? <AdminSchedule /> : <Schedule />;
       case 'reports':
         return <Reports />;
       case 'ai-insights':
