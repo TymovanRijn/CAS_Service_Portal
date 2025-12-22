@@ -33,7 +33,7 @@ async function createTestUsers() {
     console.log('Test accounts:');
     console.log('- sac@test.com (SAC role)');
     console.log('- admin@test.com (Admin role)');
-    console.log('- viewer@test.com (Dashboard Viewer role)');
+    console.log('- viewer@test.com (Stakeholder role)');
     
     client.release();
     process.exit(0);

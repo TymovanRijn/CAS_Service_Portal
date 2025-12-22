@@ -64,7 +64,7 @@ const requireRole = (allowedRoles) => {
 // Specific role middlewares
 const requireSAC = requireRole(['SAC', 'Admin']);
 const requireAdmin = requireRole(['Admin']);
-const requireDashboardAccess = requireRole(['SAC', 'Admin', 'Dashboard Viewer']);
+const requireDashboardAccess = requireRole(['SAC', 'Admin', 'Stakeholder']);
 
 module.exports = { 
   authMiddleware, 

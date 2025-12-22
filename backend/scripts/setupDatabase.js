@@ -22,7 +22,7 @@ async function setupDatabase() {
       VALUES 
         ('SAC', 'Security Asset Coordinator - Manages incidents and coordinates asset maintenance'),
         ('Admin', 'System Administrator - Full system access and user management'),
-        ('Dashboard Viewer', 'Management Dashboard Viewer - Read-only access to dashboards and reports')
+        ('Stakeholder', 'Stakeholder - Read-only access to dashboards and reports for management')
       ON CONFLICT (name) DO NOTHING
     `);
     

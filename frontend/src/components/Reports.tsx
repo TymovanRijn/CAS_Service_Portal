@@ -22,7 +22,7 @@ export const Reports: React.FC = () => {
   const [error, setError] = useState('');
 
   // Check if user has permission to view reports
-  const hasReportAccess = user?.role_name === 'Admin' || user?.role_name === 'Dashboard Viewer';
+  const hasReportAccess = user?.role_name === 'Admin' || user?.role_name === 'Stakeholder';
 
   useEffect(() => {
     if (hasReportAccess) {

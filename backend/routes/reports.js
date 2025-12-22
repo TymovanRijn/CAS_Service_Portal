@@ -4,9 +4,9 @@ const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// All routes require authentication and Admin or Dashboard Viewer role
+// All routes require authentication and Admin or Stakeholder role
 router.use(authMiddleware);
-router.use(requireRole(['Admin', 'Dashboard Viewer']));
+router.use(requireRole(['Admin', 'Stakeholder']));
 
 // Get available report dates
 router.get('/dates', getAvailableReportDates);

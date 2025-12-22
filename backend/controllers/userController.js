@@ -38,7 +38,7 @@ const getRoles = async (req, res) => {
         CASE 
           WHEN name = 'Admin' THEN 1
           WHEN name = 'SAC' THEN 2
-          WHEN name = 'Dashboard Viewer' THEN 3
+          WHEN name = 'Stakeholder' THEN 3
           ELSE 4
         END
     `);

@@ -18,8 +18,8 @@ const router = express.Router();
 // All routes require authentication
 router.use(authMiddleware);
 
-// Get action statistics - Dashboard Viewers need access for KPI Dashboard
-router.get('/stats', requireRole(['SAC', 'Admin', 'Dashboard Viewer']), getActionStats);
+// Get action statistics - Stakeholders need access for KPI Dashboard
+router.get('/stats', requireRole(['SAC', 'Admin', 'Stakeholder']), getActionStats);
 
 // Get pending actions for current user or unassigned
 router.get('/pending', requireRole(['SAC', 'Admin']), getPendingActions);
@@ -27,8 +27,8 @@ router.get('/pending', requireRole(['SAC', 'Admin']), getPendingActions);
 // Get all actions with filtering and pagination
 router.get('/', requireRole(['SAC', 'Admin']), getActions);
 
-// Get archived (completed) actions - Dashboard Viewers need access for KPI Dashboard
-router.get('/archive', requireRole(['SAC', 'Admin', 'Dashboard Viewer']), getArchivedActions);
+// Get archived (completed) actions - Stakeholders need access for KPI Dashboard
+router.get('/archive', requireRole(['SAC', 'Admin', 'Stakeholder']), getArchivedActions);
 
 // Get available users for assignment
 router.get('/users', requireRole(['SAC', 'Admin']), getAvailableUsers);
