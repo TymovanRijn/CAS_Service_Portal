@@ -232,6 +232,20 @@ async function setupDatabase() {
       ADD COLUMN IF NOT EXISTS approved_by INTEGER REFERENCES Users(id)
     `);
     
+    // AI maandrapporten / API (zie ook aiController, summaryService)
+    console.log('🤖 Creating AI_Reports table...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS AI_Reports (
+        id SERIAL PRIMARY KEY,
+        report_type VARCHAR(50) NOT NULL,
+        report_month VARCHAR(7) NOT NULL,
+        summary_data JSONB NOT NULL,
+        raw_data JSONB,
+        generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        generated_by_ai BOOLEAN DEFAULT true
+      )
+    `);
+    
     // Create indexes for better performance
     console.log('🔍 Creating indexes...');
     await client.query(`
@@ -244,6 +258,7 @@ async function setupDatabase() {
       CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON Schedules(user_id);
       CREATE INDEX IF NOT EXISTS idx_schedules_date ON Schedules(date);
       CREATE INDEX IF NOT EXISTS idx_schedules_status ON Schedules(status);
+      CREATE INDEX IF NOT EXISTS idx_ai_reports_type_month ON AI_Reports (report_type, report_month DESC);
     `);
     
     console.log('✅ Database setup completed successfully!');
@@ -261,6 +276,7 @@ async function setupDatabase() {
     console.log('- KPIRecords');
     console.log('- KnowledgeBaseArticles');
     console.log('- Schedules');
+    console.log('- AI_Reports');
     console.log('');
     console.log('Next steps:');
     console.log('1. Run: node scripts/createTestUsers.js');

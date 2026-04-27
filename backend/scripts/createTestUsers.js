@@ -5,27 +5,41 @@ async function createTestUsers() {
   try {
     const client = await pool.connect();
     
+    const roleId = async (name) => {
+      const { rows } = await client.query('SELECT id FROM Roles WHERE name = $1', [name]);
+      if (!rows.length) {
+        throw new Error(
+          `Rol "${name}" ontbreekt. Draai eerst: node scripts/setupDatabase.js`
+        );
+      }
+      return rows[0].id;
+    };
+    
+    const idSAC = await roleId('SAC');
+    const idAdmin = await roleId('Admin');
+    const idStakeholder = await roleId('Stakeholder');
+    
     // Hash password
     const password = await bcrypt.hash('test123', 10);
     
-    // Create test users
+    // Create test users (role_id uit database — niet hardcoden: id's kunnen afwijken na migraties)
     await client.query(`
       INSERT INTO Users (username, email, password_hash, role_id) 
       VALUES ($1, $2, $3, $4) 
       ON CONFLICT (email) DO NOTHING
-    `, ['sac_user', 'sac@test.com', password, 1]);
+    `, ['sac_user', 'sac@test.com', password, idSAC]);
     
     await client.query(`
       INSERT INTO Users (username, email, password_hash, role_id) 
       VALUES ($1, $2, $3, $4) 
       ON CONFLICT (email) DO NOTHING
-    `, ['admin_user', 'admin@test.com', password, 2]);
+    `, ['admin_user', 'admin@test.com', password, idAdmin]);
     
     await client.query(`
       INSERT INTO Users (username, email, password_hash, role_id) 
       VALUES ($1, $2, $3, $4) 
       ON CONFLICT (email) DO NOTHING
-    `, ['viewer_user', 'viewer@test.com', password, 3]);
+    `, ['viewer_user', 'viewer@test.com', password, idStakeholder]);
     
     console.log('✅ Test users created successfully!');
     console.log('Password for all test users: test123');
