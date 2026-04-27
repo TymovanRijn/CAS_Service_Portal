@@ -100,11 +100,33 @@ npm start
 # Installeer Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
 
-# Download Nederlands model
-ollama pull llama2:7b
+# Download model (snel en betrouwbaar op VPS)
+ollama pull llama3.2:3b
 
 # Configureer AI in backend/ai/config.js
 \`\`\`
+
+### 5. 🌍 Production Deploy (VPS)
+\`\`\`bash
+# Maak backend env bestand
+cd backend
+cp .env.example .env
+# vul DB_PASSWORD en JWT_SECRET in
+
+# Deploy frontend + backend + service restart
+cd ..
+./scripts/deploy-production.sh
+\`\`\`
+
+Standaard deploy paden/services:
+- Frontend: \`/var/www/html/sac\`
+- Backend: \`/var/www/cas-api\`
+- Backend service: \`cas-service-portal.service\`
+- Web service: \`apache2\`
+
+Template bestanden:
+- \`deploy/apache-sac.conf.example\`
+- \`deploy/cas-service-portal.service.example\`
 
 ## 🎮 Usage
 
@@ -161,7 +183,7 @@ JWT_SECRET=your_jwt_secret
 # 🤖 AI Configuration
 AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
-AI_MODEL=llama2:7b
+OLLAMA_MODEL=llama3.2:3b
 \`\`\`
 
 ## 📈 Development Status

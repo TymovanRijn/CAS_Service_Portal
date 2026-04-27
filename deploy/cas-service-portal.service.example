@@ -1,0 +1,17 @@
+[Unit]
+Description=CAS Service Portal Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/cas-api
+EnvironmentFile=/var/www/cas-api/.env
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

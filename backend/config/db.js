@@ -1,4 +1,5 @@
 const { Pool, types } = require('pg');
+require('dotenv').config();
 
 // Return DATE columns as plain strings (e.g. "2026-04-30") instead of
 // converting them to JavaScript Date objects, which causes timezone shifts.
@@ -7,11 +8,11 @@ const { Pool, types } = require('pg');
 types.setTypeParser(1082, val => val);
 
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'cas_service_portal',
-  password: 'tymo2003',
-  port: 5432,
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || '127.0.0.1',
+  database: process.env.DB_NAME || 'cas_service_portal',
+  password: process.env.DB_PASSWORD || '',
+  port: parseInt(process.env.DB_PORT || '5432', 10),
 });
 
 const connectDB = async () => {
