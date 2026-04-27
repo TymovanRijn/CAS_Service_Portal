@@ -1,5 +1,6 @@
 const { Pool, types } = require('pg');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // Return DATE columns as plain strings (e.g. "2026-04-30") instead of
 // converting them to JavaScript Date objects, which causes timezone shifts.
