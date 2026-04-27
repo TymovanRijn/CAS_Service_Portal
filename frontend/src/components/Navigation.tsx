@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
+import { getNavigationItems, getPageTitle } from '../navigationConfig';
 
 interface NavigationProps {
   currentPage: string;
@@ -8,438 +9,334 @@ interface NavigationProps {
   onSidebarToggle?: (isCollapsed: boolean) => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChange, onSidebarToggle }) => {
+export const Navigation: React.FC<NavigationProps> = ({
+  currentPage,
+  onPageChange,
+  onSidebarToggle
+}) => {
   const { user, logout } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Notify parent when sidebar collapses/expands
   useEffect(() => {
     if (onSidebarToggle) {
       onSidebarToggle(isCollapsed);
     }
   }, [isCollapsed, onSidebarToggle]);
 
-  // Close mobile sidebar when clicking outside or on page change
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setIsSidebarOpen(false);
+    if (!userMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
       }
     };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    document.addEventListener('click', onDoc, true);
+    return () => document.removeEventListener('click', onDoc, true);
+  }, [userMenuOpen]);
 
   if (!user) return null;
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const navigationItems = getNavigationItems(user);
+  const pageTitle = getPageTitle(currentPage, user);
+  const tabLabel = (item: (typeof navigationItems)[0]) => item.shortLabel ?? item.name;
 
   const handlePageChange = (page: string) => {
     onPageChange(page);
-    setIsSidebarOpen(false); // Close mobile sidebar on navigation
   };
-
-  const getNavigationItems = () => {
-    const baseItems = [
-      {
-        id: 'dashboard',
-        name: 'Dashboard',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
-          </svg>
-        ),
-        description: 'Overzicht van vandaag',
-        roles: ['SAC', 'Admin', 'Stakeholder']
-      }
-    ];
-
-    if (user.role_name === 'SAC' || user.role_name === 'Admin') {
-      baseItems.push(
-        {
-          id: 'incidents',
-          name: 'Incidenten',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          ),
-          description: 'Beheer alle incidenten',
-          roles: ['SAC', 'Admin']
-        },
-        {
-          id: 'actions',
-          name: 'Acties',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          ),
-          description: 'Beheer acties',
-          roles: ['SAC', 'Admin']
-        },
-        {
-          id: 'schedule',
-          name: user.role_name === 'Admin' ? 'Roosterbeheer' : 'Mijn Rooster',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          ),
-          description: user.role_name === 'Admin' ? 'Beheer alle roosters' : 'Bekijk en beheer je rooster',
-          roles: ['SAC', 'Admin']
-        }
-      );
-    }
-
-    if (user.role_name === 'Admin') {
-      baseItems.push(
-        {
-          id: 'admin',
-          name: 'Admin Management',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          ),
-          description: 'Gebruikers, categorieën en locaties',
-          roles: ['Admin']
-        }
-      );
-    }
-
-    if (user.role_name === 'Stakeholder' || user.role_name === 'Admin') {
-      baseItems.push(
-        {
-          id: 'kpi-dashboard',
-          name: 'KPI Dashboard',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-            </svg>
-          ),
-          description: 'Prestatie-indicatoren en analytics',
-          roles: ['Stakeholder', 'Admin']
-        },
-        {
-          id: 'reports',
-          name: 'Rapporten',
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          ),
-          description: 'Analyses en rapporten',
-          roles: ['Stakeholder', 'Admin']
-        }
-      );
-    }
-
-    // AI Insights available to all roles
-    baseItems.push(
-      {
-        id: 'ai-insights',
-        name: 'AI Insights',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-        ),
-        description: 'AI-gegenereerde inzichten',
-        roles: ['SAC', 'Admin', 'Stakeholder']
-      },
-      {
-        id: 'ai-kennisbank',
-        name: 'AI Kennisbank',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-        ),
-        description: 'Kennisbank en AI Orakel',
-        roles: ['SAC', 'Admin', 'Stakeholder']
-      }
-    );
-
-    return baseItems.filter(item => item.roles.includes(user.role_name));
-  };
-
-  const navigationItems = getNavigationItems();
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'Admin': return 'bg-red-100 text-red-800 border-red-200';
-      case 'SAC': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Stakeholder': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Admin':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'SAC':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Stakeholder':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   return (
     <>
-      {/* Mobile menu button - Improved positioning and touch target */}
-      <div className="lg:hidden fixed top-3 left-3 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="bg-white shadow-lg hover:shadow-xl transition-shadow touch-manipulation min-w-[44px] min-h-[44px] p-2"
-        >
-          {isSidebarOpen ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
-        </Button>
-      </div>
+      {/* Mobiel: zelfde informatiearchitectuur als desktop — titelbalk + tabbalk, geen aparte “drawer app” */}
+      <header
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm safe-area-top"
+        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))' }}
+      >
+        <div className="flex h-12 items-center justify-between gap-2 pl-3 pr-2 sm:pl-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">CAS Portal</p>
+            <h1 className="truncate text-base font-semibold text-foreground leading-tight">{pageTitle}</h1>
+          </div>
+          <div className="relative flex-shrink-0" ref={userMenuRef}>
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((o) => !o)}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-800 touch-manipulation"
+              aria-expanded={userMenuOpen}
+              aria-label="Accountmenu"
+            >
+              <span className="max-w-[3rem] truncate">{user.username.slice(0, 2).toUpperCase()}</span>
+            </button>
+            {userMenuOpen && (
+              <div className="absolute right-0 z-50 mt-1 w-64 rounded-lg border border-gray-200 bg-white py-2 text-left shadow-lg">
+                <p className="px-3 text-sm font-medium text-gray-900 truncate">{user.username}</p>
+                <p className="px-3 text-xs text-gray-500 truncate border-b border-gray-100 pb-2 mb-2">
+                  {user.email}
+                </p>
+                <p className="px-3 pb-2">
+                  <span
+                    className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getRoleColor(
+                      user.role_name
+                    )}`}
+                  >
+                    {user.role_name}
+                  </span>
+                </p>
+                <Button
+                  variant="outline"
+                  className="mx-2 w-[calc(100%-1rem)] justify-center"
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    logout();
+                  }}
+                >
+                  Uitloggen
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
 
-      {/* Desktop Sidebar - Unchanged but with better transitions */}
-      <div className={`hidden lg:flex fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out shadow-sm ${
-        isCollapsed ? 'w-16' : 'w-64'
-      }`}>
-        <div className="flex flex-col h-full w-full">
-          {/* Header */}
-          <div className="p-3 border-b border-gray-200">
-            <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
+        aria-label="Hoofdnavigatie"
+      >
+        <div className="scrollbar-hide flex max-w-full justify-start gap-0.5 overflow-x-auto px-1 py-1.5">
+          {navigationItems.map((item) => {
+            const isActive = currentPage === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handlePageChange(item.id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex min-h-[3.5rem] min-w-[3.6rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 touch-manipulation ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 active:bg-gray-100'
+                }`}
+              >
+                <span
+                  className={
+                    isActive ? 'text-primary-foreground [&>svg]:text-primary-foreground' : 'text-gray-500'
+                  }
+                >
+                  {item.icon}
+                </span>
+                <span
+                  className={`max-w-[4.2rem] text-center text-[10px] font-medium leading-tight ${
+                    isActive ? 'text-primary-foreground' : 'text-gray-600'
+                  }`}
+                >
+                  {tabLabel(item)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out shadow-sm ${
+          isCollapsed ? 'w-16' : 'w-64'
+        }`}
+      >
+        <div className="flex h-full w-full flex-col">
+          <div className="border-b border-gray-200 p-3">
+            <div
+              className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'space-x-3'}`}
+            >
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary">
+                <svg
+                  className="h-4 w-4 text-primary-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
                 </svg>
               </div>
-              <div className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                <h1 className="text-lg font-bold whitespace-nowrap">CAS Portal</h1>
-                <p className="text-xs text-muted-foreground whitespace-nowrap">Security Asset Coordination</p>
+              <div
+                className={`transition-all duration-300 ${
+                  isCollapsed ? 'w-0 overflow-hidden opacity-0' : 'opacity-100'
+                }`}
+              >
+                <h1 className="whitespace-nowrap text-lg font-bold">CAS Portal</h1>
+                <p className="whitespace-nowrap text-xs text-muted-foreground">Security Asset Coordination</p>
               </div>
             </div>
-            
-            {/* Collapse Toggle Button - Always below logo */}
-            <div className="flex justify-center mt-3">
-              <div className="relative group">
+
+            <div className="mt-3 flex justify-center">
+              <div className="group relative">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={toggleCollapse}
-                  className="w-8 h-8 p-0 rounded-lg transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md text-gray-600 hover:scale-105 active:scale-95 border border-transparent hover:border-blue-200"
+                  onClick={() => setIsCollapsed((c) => !c)}
+                  className="h-8 w-8 rounded-lg border border-transparent p-0 text-gray-600 transition-all duration-200 hover:scale-105 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 active:scale-95"
                   title={isCollapsed ? 'Menu uitklappen' : 'Menu inklappen'}
                 >
-                  <svg className={`w-4 h-4 transition-all duration-300 ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <svg
+                    className={`h-4 w-4 transition-all duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2.5}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                   </svg>
                 </Button>
-                
-                {/* Enhanced Tooltip for collapsed state */}
                 {isCollapsed && (
-                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out whitespace-nowrap z-50 shadow-xl pointer-events-none">
+                  <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-2 text-sm text-white opacity-0 shadow-xl transition-all duration-200 ease-in-out group-hover:visible group-hover:opacity-100 invisible">
                     Menu uitklappen
-                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+                    <div className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 -translate-x-1 rotate-45 bg-gray-900" />
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* User Info */}
-          <div className="p-4 border-b border-gray-200">
-            <div className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
-              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          <div className="border-b border-gray-200 p-4">
+            <div
+              className={`flex items-center transition-all duration-300 ${
+                isCollapsed ? 'justify-center' : 'space-x-3'
+              }`}
+            >
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">
+                <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
                 </svg>
               </div>
-              <div className={`flex-1 min-w-0 transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                <p className="text-sm font-medium text-gray-900 truncate">{user.username}</p>
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border mt-1 ${getRoleColor(user.role_name)}`}>
+              <div
+                className={`min-w-0 flex-1 transition-all duration-300 ${
+                  isCollapsed ? 'w-0 overflow-hidden opacity-0' : 'opacity-100'
+                }`}
+              >
+                <p className="truncate text-sm font-medium text-gray-900">{user.username}</p>
+                <p className="truncate text-xs text-gray-500">{user.email}</p>
+                <span
+                  className={`mt-1 inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium ${
+                    getRoleColor(user.role_name)
+                  }`}
+                >
                   {user.role_name}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className={`flex-1 p-4 transition-all duration-300 ${isCollapsed ? 'space-y-1 overflow-hidden' : 'space-y-2 overflow-y-auto'}`}>
-            <div className={`mb-4 transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mb-0' : 'opacity-100'}`}>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Navigatie</h3>
+          <nav
+            className={`flex-1 p-4 transition-all duration-300 ${
+              isCollapsed ? 'space-y-1 overflow-hidden' : 'space-y-2 overflow-y-auto'
+            }`}
+          >
+            <div
+              className={`mb-4 transition-all duration-300 ${
+                isCollapsed ? 'mb-0 h-0 overflow-hidden opacity-0' : 'opacity-100'
+              }`}
+            >
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Navigatie</h3>
             </div>
             {navigationItems.map((item) => (
-              <div key={item.id} className="relative group">
+              <div key={item.id} className="group relative">
                 <button
                   onClick={() => handlePageChange(item.id)}
-                  className={`w-full flex items-center rounded-lg text-left transition-all duration-200 hover:scale-[1.02] ${
+                  className={`flex w-full items-center rounded-lg text-left transition-all duration-200 hover:scale-[1.02] ${
                     currentPage === item.id
                       ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-gray-700 hover:bg-gray-100'
-                  } ${isCollapsed ? 'justify-center p-3 h-12' : 'space-x-3 px-3 py-3'}`}
+                  } ${isCollapsed ? 'h-12 justify-center p-3' : 'space-x-3 px-3 py-3'}`}
                 >
-                  <span className={`flex-shrink-0 ${currentPage === item.id ? 'text-primary-foreground' : 'text-gray-500'}`}>
+                  <span
+                    className={`flex-shrink-0 ${
+                      currentPage === item.id ? 'text-primary-foreground' : 'text-gray-500'
+                    }`}
+                  >
                     {item.icon}
                   </span>
-                  <div className={`flex-1 min-w-0 transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className={`text-xs truncate ${
-                      currentPage === item.id ? 'text-primary-foreground/80' : 'text-gray-500'
-                    }`}>
+                  <div
+                    className={`min-w-0 flex-1 transition-all duration-300 ${
+                      isCollapsed ? 'w-0 overflow-hidden opacity-0' : 'opacity-100'
+                    }`}
+                  >
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p
+                      className={`truncate text-xs ${
+                        currentPage === item.id ? 'text-primary-foreground/80' : 'text-gray-500'
+                      }`}
+                    >
                       {item.description}
                     </p>
                   </div>
                 </button>
-                
-                {/* Tooltip for collapsed state */}
+
                 {isCollapsed && (
-                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-3 py-2 bg-white border border-gray-200 text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out whitespace-nowrap z-50 shadow-xl pointer-events-none">
-                    <div className="flex flex-col">
+                  <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 opacity-0 shadow-xl transition-all duration-200 ease-in-out group-hover:visible group-hover:opacity-100 invisible">
+                    <div className="relative rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900">
                       <span className="font-medium text-gray-900">{item.name}</span>
-                      <span className="text-xs text-gray-600">{item.description}</span>
+                      <span className="block text-xs text-gray-600">{item.description}</span>
                     </div>
-                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-white border-l border-b border-gray-200 rotate-45"></div>
+                    <div className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 -translate-x-1 rotate-45 border-b border-l border-gray-200 bg-white" />
                   </div>
                 )}
               </div>
             ))}
           </nav>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="relative group">
+          <div className="border-t border-gray-200 p-4">
+            <div className="group relative">
               <Button
                 variant="outline"
                 onClick={logout}
-                className={`w-full transition-all duration-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 ${isCollapsed ? 'px-0 justify-center' : 'justify-start'}`}
+                className={`w-full transition-all duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-700 ${
+                  isCollapsed ? 'justify-center px-0' : 'justify-start'
+                }`}
               >
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
                 </svg>
-                <span className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden ml-0' : 'opacity-100 ml-2'}`}>
+                <span
+                  className={`transition-all duration-300 ${
+                    isCollapsed ? 'ml-0 w-0 overflow-hidden opacity-0' : 'ml-2 opacity-100'
+                  }`}
+                >
                   Uitloggen
                 </span>
               </Button>
-              
-              {/* Tooltip for collapsed logout button */}
-              {isCollapsed && (
-                <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-3 py-2 bg-white border border-gray-200 text-gray-900 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out whitespace-nowrap z-50 shadow-xl pointer-events-none">
-                  Uitloggen
-                  <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-white border-l border-b border-gray-200 rotate-45"></div>
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Mobile Sidebar - Enhanced with better touch experience */}
-      <div className={`lg:hidden fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out shadow-xl ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="flex flex-col h-full">
-          {/* Mobile Header - Enhanced */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-lg font-bold">CAS Portal</h1>
-                <p className="text-xs text-muted-foreground">Security Asset Coordination</p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsSidebarOpen(false)}
-              className="touch-manipulation min-w-[44px] min-h-[44px] p-2 hover:bg-gray-200"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </Button>
-          </div>
-
-          {/* Mobile User Info - Enhanced */}
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-gray-900 truncate">{user.username}</p>
-                <p className="text-sm text-gray-600 truncate">{user.email}</p>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border mt-2 ${getRoleColor(user.role_name)}`}>
-                  {user.role_name}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile Navigation - Enhanced touch targets */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Navigatie</h3>
-            </div>
-            {navigationItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handlePageChange(item.id)}
-                className={`w-full flex items-center space-x-4 px-4 py-4 rounded-xl text-left transition-all duration-200 touch-manipulation active:scale-95 ${
-                  currentPage === item.id
-                    ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02]'
-                    : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                }`}
-              >
-                <span className={`flex-shrink-0 ${currentPage === item.id ? 'text-primary-foreground' : 'text-gray-500'}`}>
-                  {item.icon}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium truncate">{item.name}</p>
-                  <p className={`text-sm truncate ${
-                    currentPage === item.id ? 'text-primary-foreground/80' : 'text-gray-500'
-                  }`}>
-                    {item.description}
-                  </p>
-                </div>
-                {currentPage === item.id && (
-                  <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          {/* Mobile Footer - Enhanced */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
-            <Button
-              variant="outline"
-              onClick={logout}
-              className="w-full justify-start py-3 text-base font-medium hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-200 touch-manipulation active:scale-95"
-            >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Uitloggen
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Overlay for mobile with backdrop blur */}
-      {isSidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-all duration-300"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
     </>
   );
-}; 
+};

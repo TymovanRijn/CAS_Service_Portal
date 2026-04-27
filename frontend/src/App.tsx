@@ -1,17 +1,8 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/Login';
-import { Dashboard } from './components/Dashboard';
-import { Archive } from './components/Archive';
-import { ActionManagement } from './components/ActionManagement';
-import { Reports } from './components/Reports';
-import { AIInsights } from './components/AIInsights';
-import { AIKennisbank } from './components/AIKennisbank';
-import { AdminManagement } from './components/AdminManagement';
-import { KPIDashboard } from './components/KPIDashboard';
 import { Navigation } from './components/Navigation';
-import { Schedule } from './components/Schedule';
-import { AdminSchedule } from './components/AdminSchedule';
+import { renderPage } from './pageRegistry';
 
 // Main App Content Component
 const AppContent: React.FC = () => {
@@ -41,33 +32,6 @@ const AppContent: React.FC = () => {
     return <Login />;
   }
 
-  const renderCurrentPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'incidents':
-        return <Archive />;
-      case 'archive':
-        return <Archive />; // Keep for backwards compatibility
-      case 'actions':
-        return <ActionManagement />;
-      case 'admin':
-        return <AdminManagement />;
-      case 'schedule':
-        return user?.role_name === 'Admin' ? <AdminSchedule /> : <Schedule />;
-      case 'reports':
-        return <Reports />;
-      case 'ai-insights':
-        return <AIInsights />;
-      case 'ai-kennisbank':
-        return <AIKennisbank />;
-      case 'kpi-dashboard':
-        return <KPIDashboard />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Sidebar */}
@@ -81,9 +45,9 @@ const AppContent: React.FC = () => {
       <div className={`transition-all duration-300 ease-in-out ${
         isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}>
-        {/* Mobile-first padding and spacing */}
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 pt-16 lg:pt-6">
-          {renderCurrentPage()}
+        {/* Mobiel: ruimte voor vaste titelbalk + ondere tabbalk; desktop: zelfde padding als voorheen */}
+        <main className="min-h-0 max-w-full px-3 pt-14 pb-24 sm:px-4 md:px-6 lg:px-8 lg:pt-6 lg:pb-8">
+          {renderPage(currentPage, user)}
         </main>
       </div>
     </div>

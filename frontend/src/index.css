@@ -347,6 +347,14 @@
     opacity: 0.8;
   }
 
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Mobile-specific responsive utilities */
   @media (max-width: 640px) {
     .mobile-text-base {
