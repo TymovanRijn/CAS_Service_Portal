@@ -125,16 +125,20 @@ const generateDailyReport = async (req, res) => {
       try {
         console.log(`Starting PDF generation (attempt ${attempt}/${maxRetries})...`);
         
-        // Use minimal, stable configuration
-        browser = await puppeteer.launch({
-          headless: true,
+        // Optional: PUPPETEER_EXECUTABLE_PATH if bundled Chromium fails to start (see https://pptr.dev/troubleshooting)
+        const launchOpts = {
+          headless: 'new',
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage'
           ],
           timeout: 30000
-        });
+        };
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+          launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        }
+        browser = await puppeteer.launch(launchOpts);
         
         console.log('Browser launched successfully');
         
@@ -803,8 +807,17 @@ const getAvailableReportDates = async (req, res) => {
     const result = await client.query(query);
     client.release();
     
-    res.json({ 
-      dates: result.rows.map(row => row.report_date.toISOString().split('T')[0])
+    // DATE columns are strings (see config/db.js types.setTypeParser for OID 1082)
+    res.json({
+      dates: result.rows
+        .map((row) => {
+          const v = row.report_date;
+          if (v == null) return null;
+          if (typeof v === 'string') return v;
+          if (v instanceof Date) return v.toISOString().split('T')[0];
+          return String(v).slice(0, 10);
+        })
+        .filter(Boolean)
     });
   } catch (err) {
     console.error('Error fetching available report dates:', err);

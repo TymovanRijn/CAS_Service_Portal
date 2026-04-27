@@ -6,10 +6,12 @@ const AI_CONFIG = {
   // Ollama Configuration
   ollama: {
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'llama3.2:3b', // Updated to use the model we downloaded
-    timeout: 30000, // 30 seconds
+    model: process.env.OLLAMA_MODEL || 'gemma4:e4b',
+    timeout: 120000, // 2 minutes (model needs time to load on first use)
     temperature: 0.7,
-    maxTokens: 1000 // Increased for better summaries
+    maxTokens: 1000, // Increased for better summaries
+    // CLI: ollama run model --reasoning off  →  API: top-level "think": false
+    reasoning: (process.env.OLLAMA_REASONING || 'off').toLowerCase() // 'off' | 'on'
   },
   
   // OpenAI Configuration (backup option)
@@ -28,8 +30,8 @@ const AI_CONFIG = {
       schedule: '0 0 1 * *', // First day of month at midnight
       maxHistoryMonths: 12,
       useRealAI: true, // Enable real AI generation
-      summaryModel: 'llama3.2:3b',
-      analysisModel: 'qwen2.5:3b'
+      summaryModel: 'gemma4:e4b',
+      analysisModel: 'gemma4:e4b'
     },
     trendDetection: {
       enabled: true,

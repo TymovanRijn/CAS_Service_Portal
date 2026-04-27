@@ -17,22 +17,36 @@ class OllamaService {
    */
   async generateText(prompt, options = {}) {
     const startTime = Date.now();
+    const timeoutMs = this.config.timeout || 120000; // 2 minutes default
+
+    const controller = new AbortController();
+    const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
     
     try {
+      const model = options.model || this.config.model;
+      const payload = {
+        model,
+        prompt,
+        stream: false,
+        options: {
+          temperature: options.temperature ?? this.config.temperature,
+          num_predict: options.maxTokens ?? this.config.maxTokens,
+        }
+      };
+      // Ollama CLI --reasoning off  →  top-level "think": false (see docs.ollama.com / thinking)
+      if (options.think !== undefined) {
+        payload.think = options.think;
+      } else if (String(this.config.reasoning || 'off').toLowerCase() !== 'on') {
+        payload.think = false;
+      }
+
       const response = await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: options.model || this.config.model || 'llama3.2:3b',
-          prompt: prompt,
-          stream: false,
-          options: {
-            temperature: options.temperature || this.config.temperature,
-            num_predict: options.maxTokens || this.config.maxTokens,
-          }
-        })
+        signal: controller.signal,
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -47,8 +61,14 @@ class OllamaService {
       return data.response;
       
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error(`❌ Ollama generation timed out after ${timeoutMs}ms`);
+        throw new Error(`AI generation timed out after ${timeoutMs / 1000} seconds`);
+      }
       console.error('❌ Ollama generation error:', error);
       throw new Error(`AI generation failed: ${error.message}`);
+    } finally {
+      clearTimeout(timeoutHandle);
     }
   }
 

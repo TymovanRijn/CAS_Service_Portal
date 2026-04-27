@@ -106,9 +106,9 @@ export const Dashboard: React.FC = () => {
 
   if (!user) return null;
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setError(null);
 
       const token = localStorage.getItem('token');
@@ -159,14 +159,12 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleIncidentCreated = () => {
-    // Refresh dashboard data after incident creation
-    fetchDashboardData();
+    fetchDashboardData(true);
     setIsCreateIncidentModalOpen(false);
   };
 
   const handleActionCreated = () => {
-    // Refresh dashboard data after action creation
-    fetchDashboardData();
+    fetchDashboardData(true);
   };
 
   const handleTakeAction = async (actionId: number) => {
@@ -182,7 +180,7 @@ export const Dashboard: React.FC = () => {
       });
 
       if (response.ok) {
-        fetchDashboardData(); // Refresh data
+        fetchDashboardData(true);
       }
     } catch (err) {
       console.error('Error taking action:', err);
@@ -203,7 +201,7 @@ export const Dashboard: React.FC = () => {
       });
 
       if (response.ok) {
-        fetchDashboardData(); // Refresh data
+        fetchDashboardData(true);
       }
     } catch (err) {
       console.error('Error completing action:', err);
@@ -223,7 +221,7 @@ export const Dashboard: React.FC = () => {
       });
 
       if (response.ok) {
-        fetchDashboardData(); // Refresh data
+        fetchDashboardData(true);
       }
     } catch (err) {
       console.error('Error releasing action:', err);
@@ -236,8 +234,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleIncidentUpdated = () => {
-    // Refresh dashboard data after incident update
-    fetchDashboardData();
+    fetchDashboardData(true);
     setIsIncidentDetailModalOpen(false);
     setSelectedIncident(null);
   };
@@ -248,7 +245,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleActionUpdated = () => {
-    fetchDashboardData();
+    fetchDashboardData(true);
     setIsActionDetailModalOpen(false);
     setSelectedAction(null);
   };

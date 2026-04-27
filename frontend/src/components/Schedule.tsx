@@ -65,9 +65,9 @@ export const Schedule: React.FC = () => {
     fetchSchedules();
   }, [currentMonth]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setError('');
       
       const year = currentMonth.getFullYear();
@@ -94,51 +94,7 @@ export const Schedule: React.FC = () => {
         const data = await response.json();
         const schedulesData = data.schedules || [];
         
-        // Normalize dates from database - handle UTC timezone conversion issue
-        // PostgreSQL DATE type is stored as date only, but when returned as timestamp it's converted to UTC
-        // If server is in UTC+1, "2025-12-25" becomes "2025-12-24T23:00:00.000Z" in UTC
-        // We need to recover the original date by checking the UTC time
-        const normalizedSchedules = schedulesData.map((s: Schedule) => {
-          let dateStr = s.date;
-          
-          if (dateStr.includes('T')) {
-            // Parse the UTC timestamp
-            const utcDate = new Date(dateStr);
-            
-            // If UTC time is 23:00 or later, it means the date was shifted back by timezone conversion
-            // Example: "2025-12-25" in UTC+1 becomes "2025-12-24T23:00:00.000Z" in UTC
-            // We need to add 1 day to get back to the original date
-            const utcHours = utcDate.getUTCHours();
-            const utcMinutes = utcDate.getUTCMinutes();
-            const utcSeconds = utcDate.getUTCSeconds();
-            
-            // If time is 23:00:00 or later, it's likely a timezone shift (server in UTC+1 or similar)
-            if (utcHours >= 23 || (utcHours === 22 && utcMinutes > 0)) {
-              // Add one day to compensate for timezone conversion
-              const correctedDate = new Date(utcDate);
-              correctedDate.setUTCDate(correctedDate.getUTCDate() + 1);
-              const year = correctedDate.getUTCFullYear();
-              const month = correctedDate.getUTCMonth();
-              const day = correctedDate.getUTCDate();
-              dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            } else {
-              // Normal case - use UTC date directly
-              const year = utcDate.getUTCFullYear();
-              const month = utcDate.getUTCMonth();
-              const day = utcDate.getUTCDate();
-              dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            }
-          } else if (dateStr.includes(' ')) {
-            dateStr = dateStr.split(' ')[0];
-          }
-          
-          return {
-            ...s,
-            date: dateStr
-          };
-        });
-        
-        setSchedules(normalizedSchedules);
+        setSchedules(schedulesData);
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Fout bij ophalen rooster');
@@ -239,7 +195,7 @@ export const Schedule: React.FC = () => {
       if (response.ok) {
         setIsQuickAddModalOpen(false);
         setSelectedDate(null);
-        fetchSchedules();
+        fetchSchedules(true);
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Fout bij opslaan beschikbaarheid');
@@ -276,7 +232,7 @@ export const Schedule: React.FC = () => {
       if (response.ok) {
         setIsDeleteModalOpen(false);
         setSelectedScheduleForDelete(null);
-        fetchSchedules();
+        fetchSchedules(true);
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Fout bij verwijderen beschikbaarheid');
@@ -373,7 +329,7 @@ export const Schedule: React.FC = () => {
     });
   };
 
-  if (isLoading) {
+  if (isLoading && schedules.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

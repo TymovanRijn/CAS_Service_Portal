@@ -3,6 +3,30 @@ const OllamaService = require('../ai/services/ollamaService');
 
 const ollamaService = new OllamaService();
 
+/** Long articles blow up prompt size and make local inference very slow */
+const MAX_ORACLE_ARTICLE_CHARS = 1200;
+
+function truncateArticleBody(content, maxLen) {
+  if (!content) return '';
+  if (content.length <= maxLen) return content;
+  return `${content.slice(0, maxLen)}\n[… tekst ingekort voor snelheid …]`;
+}
+
+/** Strip chain-of-thought blocks some models emit before the real answer */
+function stripThinkingFromAnswer(text) {
+  if (!text || typeof text !== 'string') return text;
+  let out = text;
+  const blocks = [
+    /<redacted_thinking[\s\S]*?<\/redacted_thinking>/gi,
+    /<redacted_reasoning[\s\S]*?<\/redacted_reasoning>/gi,
+    /<think[\s\S]*?<\/think>/gi,
+  ];
+  for (const re of blocks) {
+    out = out.replace(re, '');
+  }
+  return out.trim();
+}
+
 // Get all articles
 const getArticles = async (req, res) => {
   try {
@@ -124,9 +148,9 @@ const askOracle = async (req, res) => {
       });
     }
     
-    // Prepare knowledge context with article IDs for reference
-    const context = articles.map((a, index) => 
-      `ARTIKEL ${index + 1} - ID: ${a.id}\nTITEL: ${a.title}\nROL: ${a.role}\nINHOUD: ${a.content}`
+    // Prepare knowledge context (truncate bodies — full text makes local LLM very slow)
+    const context = articles.map((a, index) =>
+      `ARTIKEL ${index + 1} - ID: ${a.id}\nTITEL: ${a.title}\nROL: ${a.role}\nINHOUD: ${truncateArticleBody(a.content, MAX_ORACLE_ARTICLE_CHARS)}`
     ).join('\n\n---\n\n');
     
     // Build article list for reference
@@ -173,19 +197,19 @@ INSTRUCTIES:
 3. Als informatie niet beschikbaar is, zeg dat expliciet
 4. Antwoord in het Nederlands
 5. Gebruik **bold** voor belangrijke termen
-6. HALLUCINEER NIET - alleen informatie uit bovenstaande artikelen`;
+6. HALLUCINEER NIET - alleen informatie uit bovenstaande artikelen
+7. Antwoord DIRECT en BEKNOPT (maximaal 6 zinnen). Geen stap-voor-stap redenering, geen Engels, geen meta-commentaar ("Okay, the user…") — alleen het antwoord voor de SAC-medewerker.`;
 
     // Generate AI response using Ollama
     try {
       const fullPrompt = `${systemPrompt}\n\nGebruikersvraag: ${question}\n\nAntwoord:`;
       
       const aiResponse = await ollamaService.generateText(fullPrompt, {
-        temperature: 0.3, // Lower temperature for more factual, less creative responses
-        maxTokens: 800
+        temperature: 0.25,
+        maxTokens: 384
       });
-      
-      // Post-process: Check if response mentions non-existent articles and clean it up
-      let cleanedResponse = aiResponse.trim();
+
+      let cleanedResponse = stripThinkingFromAnswer(String(aiResponse || '').trim());
       const articleTitles = articles.map(a => a.title.toLowerCase());
       
       // Check for common hallucination patterns

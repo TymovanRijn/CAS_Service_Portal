@@ -70,15 +70,18 @@ export const AdminSchedule: React.FC = () => {
     }
   };
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setError('');
       
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth();
-      const startDate = new Date(year, month, 1).toISOString().split('T')[0];
-      const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDate = `${firstDay.getFullYear()}-${String(firstDay.getMonth() + 1).padStart(2, '0')}-${String(firstDay.getDate()).padStart(2, '0')}`;
+      const endDate = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+
       
       const params = new URLSearchParams({
         startDate,
@@ -158,7 +161,7 @@ export const AdminSchedule: React.FC = () => {
         setIsModalOpen(false);
         setSelectedSchedule(null);
         setActionNotes('');
-        fetchSchedules();
+        fetchSchedules(true);
         
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(''), 3000);
@@ -354,7 +357,7 @@ export const AdminSchedule: React.FC = () => {
   const approvedCount = schedules.filter(s => s.status === 'approved').length;
   const rejectedCount = schedules.filter(s => s.status === 'rejected').length;
 
-  if (isLoading) {
+  if (isLoading && schedules.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

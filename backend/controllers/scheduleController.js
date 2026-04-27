@@ -26,12 +26,14 @@ const getUserSchedules = async (req, res) => {
       query += ` AND s.date BETWEEN $2 AND $3`;
       params.push(startDate, endDate);
     } else {
-      // Default to current month
+      // Default to current month — use local date components to avoid UTC timezone shift
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const startStr = `${firstDay.getFullYear()}-${String(firstDay.getMonth() + 1).padStart(2, '0')}-${String(firstDay.getDate()).padStart(2, '0')}`;
+      const endStr = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
       query += ` AND s.date BETWEEN $2 AND $3`;
-      params.push(firstDay.toISOString().split('T')[0], lastDay.toISOString().split('T')[0]);
+      params.push(startStr, endStr);
     }
     
     query += ` ORDER BY s.date ASC, s.start_time ASC`;
@@ -76,12 +78,14 @@ const getAllSchedules = async (req, res) => {
       params.push(startDate, endDate);
       paramCount += 2;
     } else {
-      // Default to current month
+      // Default to current month — use local date components to avoid UTC timezone shift
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const startStr = `${firstDay.getFullYear()}-${String(firstDay.getMonth() + 1).padStart(2, '0')}-${String(firstDay.getDate()).padStart(2, '0')}`;
+      const endStr = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
       query += ` AND s.date BETWEEN $${paramCount} AND $${paramCount + 1}`;
-      params.push(firstDay.toISOString().split('T')[0], lastDay.toISOString().split('T')[0]);
+      params.push(startStr, endStr);
       paramCount += 2;
     }
     

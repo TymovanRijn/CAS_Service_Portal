@@ -131,8 +131,8 @@ export const ActionManagement: React.FC = () => {
     }
   };
 
-  const fetchActions = async () => {
-    setIsLoading(true);
+  const fetchActions = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     setError('');
 
     try {
@@ -211,7 +211,7 @@ export const ActionManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        fetchActions();
+        fetchActions(true);
         fetchActionStats();
       } else {
         const errorData = await response.json();
@@ -237,7 +237,7 @@ export const ActionManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        fetchActions();
+        fetchActions(true);
         fetchActionStats();
       } else {
         const errorData = await response.json();
@@ -262,7 +262,7 @@ export const ActionManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        fetchActions();
+        fetchActions(true);
         fetchActionStats();
       } else {
         const errorData = await response.json();
@@ -297,7 +297,7 @@ export const ActionManagement: React.FC = () => {
   };
 
   const handleActionCreated = () => {
-    fetchActions();
+    fetchActions(true);
     fetchActionStats();
   };
 
@@ -307,7 +307,7 @@ export const ActionManagement: React.FC = () => {
   };
 
   const handleActionUpdated = () => {
-    fetchActions();
+    fetchActions(true);
     fetchActionStats();
     setIsActionDetailModalOpen(false);
     setSelectedAction(null);
@@ -643,7 +643,7 @@ export const ActionManagement: React.FC = () => {
             </div>
           )}
 
-          {isLoading ? (
+          {isLoading && actions.length === 0 ? (
             <div className="flex items-center justify-center py-8 sm:py-12">
               <svg className="animate-spin h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
