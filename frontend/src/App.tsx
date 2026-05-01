@@ -16,13 +16,16 @@ const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <svg className="animate-spin h-8 w-8 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6 pt-[max(1.5rem,env(safe-area-inset-top,0px))] pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
+          <span className="text-lg font-extrabold tracking-tight">CAS</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden>
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <p className="text-muted-foreground">Applicatie laden...</p>
+          <span>Even geduld…</span>
         </div>
       </div>
     );
@@ -33,7 +36,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 max-lg:bg-gradient-to-b max-lg:from-slate-50 max-lg:to-slate-100/95">
       {/* Navigation Sidebar */}
       <Navigation 
         currentPage={currentPage} 
@@ -45,9 +48,11 @@ const AppContent: React.FC = () => {
       <div className={`transition-all duration-300 ease-in-out ${
         isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}>
-        {/* Mobiel: ruimte voor vaste titelbalk + ondere tabbalk; desktop: zelfde padding als voorheen */}
-        <main className="min-h-0 max-w-full px-3 pt-14 pb-24 sm:px-4 md:px-6 lg:px-8 lg:pt-6 lg:pb-8">
-          {renderPage(currentPage, user)}
+        {/* Mobiel: header (~3rem) + safe area + ruimte voor drijvende dock; desktop ongewijzigd */}
+        <main className="min-h-0 max-w-full px-3 pt-[calc(env(safe-area-inset-top,0px)+3rem+0.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+7.25rem)] sm:px-4 md:px-6 lg:px-8 lg:pt-6 lg:pb-8">
+          <div key={currentPage} className="page-fade">
+            {renderPage(currentPage, user)}
+          </div>
         </main>
       </div>
     </div>

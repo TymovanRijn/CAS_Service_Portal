@@ -71,7 +71,7 @@ export function getNavigationItems(user: { role_name: string }): NavItem[] {
           </svg>
         ),
         description: user.role_name === 'Admin' ? 'Beheer alle roosters' : 'Bekijk en beheer je rooster',
-        roles: ['SAC', 'Admin']
+        roles: ['Admin']
       }
     );
   }
@@ -131,7 +131,7 @@ export function getNavigationItems(user: { role_name: string }): NavItem[] {
         </svg>
       ),
       description: 'AI-gegenereerde inzichten',
-      roles: ['SAC', 'Admin', 'Stakeholder']
+      roles: ['Admin', 'Stakeholder']
     },
     {
       id: 'ai-kennisbank',

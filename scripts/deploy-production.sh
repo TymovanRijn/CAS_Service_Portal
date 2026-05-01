@@ -111,6 +111,12 @@ if [ ! -f "${BACKEND_DIR}/.env" ]; then
   exit 1
 fi
 
+if [ ! -f "${FRONTEND_DIR}/.env.production" ]; then
+  echo "Missing ${FRONTEND_DIR}/.env.production"
+  echo "Create it first with: REACT_APP_BACKEND_URL=https://${APP_DOMAIN}"
+  exit 1
+fi
+
 echo "==> Validating backend env values"
 ensure_env_value "JWT_SECRET"
 ensure_env_value "DB_HOST"
@@ -124,6 +130,19 @@ reject_placeholder_env "DB_PASSWORD" "replace_with_db_password"
 echo "==> Building frontend production assets"
 npm --prefix "$FRONTEND_DIR" install
 npm --prefix "$FRONTEND_DIR" run build
+
+if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "==> Deploying from git $(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?') ($(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?'))"
+  if ! git -C "$PROJECT_ROOT" diff-index --quiet HEAD -- 2>/dev/null; then
+    echo "WARNING: project has uncommitted changes; build uses working tree as-is (not last commit only)."
+  fi
+fi
+echo "==> Frontend build fingerprint (verify after deploy)"
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum "${FRONTEND_DIR}/build/index.html" "${FRONTEND_DIR}/build/sw.js" "${FRONTEND_DIR}/build/manifest.json" 2>/dev/null || true
+else
+  wc -c "${FRONTEND_DIR}/build/index.html" "${FRONTEND_DIR}/build/sw.js" "${FRONTEND_DIR}/build/manifest.json" 2>/dev/null || true
+fi
 
 echo "==> Installing backend dependencies"
 npm --prefix "$BACKEND_DIR" install --omit=dev

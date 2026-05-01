@@ -443,11 +443,24 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   const documentAttachments = attachments.filter(att => !att.mime_type.startsWith('image/'));
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      {/* Mobile-first responsive modal */}
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto sm:overflow-hidden sm:py-0">
+      {/* Backdrop: los klikoppervlak */}
+      <button
+        type="button"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        aria-label="Venster sluiten"
+        onClick={isSaving ? undefined : onClose}
+      />
+
+      <div className="relative mx-auto flex min-h-full justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:min-h-[100vh] sm:items-center sm:px-4 sm:py-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="relative flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xl max-h-[min(94dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] sm:max-h-[min(94dvh,calc(100dvh-(env(safe-area-inset-top)+env(safe-area-inset-bottom)+2rem)))]"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header - Mobile optimized */}
-        <div className="flex items-center justify-between p-3 sm:p-4 lg:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-slate-50/90 p-3 sm:p-4">
           <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -492,8 +505,8 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Content - Mobile-first scrollable layout */}
-        <div className="overflow-y-auto max-h-[calc(98vh-120px)] sm:max-h-[calc(95vh-140px)]">
+        {/* Scrollbaar middendeel */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
           <div className="p-3 sm:p-4 lg:p-6">
             {/* Error message */}
             {error && (
@@ -801,9 +814,9 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Footer - Mobile optimized */}
+        {/* Footer */}
         {isEditing && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3 p-3 sm:p-4 lg:p-6 border-t border-gray-200 bg-gray-50">
+          <div className="sticky bottom-0 z-10 flex shrink-0 flex-col gap-3 border-t border-gray-200 bg-gray-50/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-gray-50/90 sm:flex-row sm:items-center sm:justify-end sm:space-x-3 sm:p-4">
             <Button
               type="button"
               variant="outline"
@@ -846,6 +859,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
             </Button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

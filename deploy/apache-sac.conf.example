@@ -3,6 +3,7 @@
     Redirect permanent / https://sac.cas-nl.com/
 </VirtualHost>
 
+# Vereist: sudo a2enmod headers rewrite proxy proxy_http ssl
 <VirtualHost *:443>
     ServerName sac.cas-nl.com
     DocumentRoot /var/www/html/sac
@@ -11,6 +12,10 @@
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
+        # SPA: nooit index.html of service worker lang cachen — anders blijft oude bundle actief
+        <FilesMatch "^(index\.html|sw\.js|manifest\.json)$">
+            Header set Cache-Control "no-cache, no-store, must-revalidate"
+        </FilesMatch>
         RewriteEngine On
         RewriteBase /
         RewriteRule ^index\.html$ - [L]

@@ -27,7 +27,7 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
       <div className="w-full max-w-md">
         <Card className="border-2">
           <CardHeader className="text-center space-y-4">

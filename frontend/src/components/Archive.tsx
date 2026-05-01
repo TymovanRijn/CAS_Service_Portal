@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { IncidentDetailModal } from './IncidentDetailModal';
 import { CreateIncidentModal } from './CreateIncidentModal';
+import { CollapsibleFiltersCard } from './list/CollapsibleFiltersCard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -190,6 +191,15 @@ export const Archive: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  const activeFilterCount =
+    Number(Boolean(filters.search)) +
+    Number(Boolean(filters.status)) +
+    Number(Boolean(filters.priority)) +
+    Number(Boolean(filters.category)) +
+    Number(Boolean(filters.location)) +
+    Number(Boolean(filters.startDate)) +
+    Number(Boolean(filters.endDate));
+
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
@@ -239,29 +249,31 @@ export const Archive: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header — zelfde patroon als Acties */}
+      <div className="flex flex-col gap-3 px-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Incidenten</h1>
-          <p className="text-gray-600">Beheer en bekijk alle incidenten</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Incidenten</h1>
+          <p className="mt-1 text-sm text-slate-600 sm:text-base">Overzicht, filters en oppakken</p>
         </div>
-        <Button onClick={() => setIsCreateIncidentModalOpen(true)} className="flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Button
+          onClick={() => setIsCreateIncidentModalOpen(true)}
+          className="h-11 w-full touch-manipulation shadow-sm sm:h-10 sm:w-auto"
+        >
+          <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Nieuw Incident
+          Nieuw incident
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
-          <CardDescription>Filter incidenten op basis van verschillende criteria</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      {/* Filters — standaard dicht */}
+      <CollapsibleFiltersCard
+        activeCount={activeFilterCount}
+        onQuickClear={clearFilters}
+        description="Filter op zoekwoord, status, prioriteit, locatie of periode als je wilt."
+      >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Search */}
             <div>
               <label className="text-sm font-medium mb-1 block">Zoeken</label>
@@ -352,25 +364,24 @@ export const Archive: React.FC = () => {
               />
             </div>
 
-            {/* Clear Filters Button */}
-            <div className="flex items-end">
-              <Button variant="outline" onClick={clearFilters} className="w-full">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Wis filters */}
+            <div className="flex items-end md:col-span-2 lg:col-span-4">
+              <Button variant="outline" onClick={clearFilters} type="button" className="w-full touch-manipulation">
+                <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Wis filters
+                Alle filters wissen
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </CollapsibleFiltersCard>
 
-      {/* Results */}
-      <Card>
+      {/* Resultaten */}
+      <Card className="border-slate-200/90 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Resultaten</CardTitle>
+              <CardTitle className="text-base font-semibold sm:text-lg">Resultaten</CardTitle>
               <CardDescription>
                 {pagination.total} incidenten gevonden
                 {pagination.total > 0 && (
@@ -444,7 +455,7 @@ export const Archive: React.FC = () => {
               {incidents.map((incident) => (
                 <div
                   key={incident.id}
-                  className="p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer rounded-xl border border-slate-200/90 bg-white p-4 transition-colors hover:bg-slate-50/95"
                   onClick={() => handleIncidentClick(incident)}
                 >
                   <div className="flex items-start justify-between mb-2">

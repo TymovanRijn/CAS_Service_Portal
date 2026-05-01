@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { CreateActionModal } from './CreateActionModal';
 import { ActionDetailModal } from './ActionDetailModal';
 import { useAuth } from '../contexts/AuthContext';
+import { CollapsibleFiltersCard } from './list/CollapsibleFiltersCard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -68,7 +69,6 @@ export const ActionManagement: React.FC = () => {
   const [error, setError] = useState('');
   const [currentView, setCurrentView] = useState<'pending' | 'all' | 'archive'>('pending');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const [isActionDetailModalOpen, setIsActionDetailModalOpen] = useState(false);
 
@@ -362,22 +362,30 @@ export const ActionManagement: React.FC = () => {
     ) && action.status !== 'Completed';
   };
 
+  const activeFilterCount =
+    Number(Boolean(filters.search)) +
+    Number(Boolean(filters.status)) +
+    Number(Boolean(filters.priority)) +
+    Number(Boolean(filters.assigned_to)) +
+    Number(Boolean(filters.incident_id)) +
+    Number(Boolean(filters.startDate)) +
+    Number(Boolean(filters.endDate));
+
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Mobile-first Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-        <div className="px-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Actie Beheer</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Beheer en volg alle acties</p>
+      <div className="flex flex-col gap-3 px-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Acties</h1>
+          <p className="mt-1 text-sm text-slate-600 sm:text-base">Overzicht, oppakken en voltooien</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsCreateModalOpen(true)}
-          className="w-full sm:w-auto touch-manipulation"
+          className="h-11 w-full touch-manipulation shadow-sm sm:h-10 sm:w-auto"
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Nieuwe Actie
+          Nieuwe actie
         </Button>
       </div>
 
@@ -484,33 +492,21 @@ export const ActionManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Mobile-optimized Filters */}
+      {/* Filters — alleen bij Alle / Archief; standaard dicht */}
       {currentView !== 'pending' && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
-                <CardDescription className="hidden sm:block">Filter acties op basis van verschillende criteria</CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="sm:hidden touch-manipulation"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-                {showFilters ? 'Verbergen' : 'Tonen'}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className={`${showFilters ? 'block' : 'hidden sm:block'}`}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 mb-4">
+        <CollapsibleFiltersCard
+          activeCount={activeFilterCount}
+          onQuickClear={clearFilters}
+          description={
+            currentView === 'archive'
+              ? 'Zelfde filters als elders; archival betekent meer historie.'
+              : 'Verfijn de lijst met zoekwoord, status, prioriteit en toewijzing.'
+          }
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {/* Search */}
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label className="text-sm font-medium mb-2 block">Zoeken</label>
+              <div className="sm:col-span-2 lg:col-span-1 xl:col-span-1">
+                <label className="mb-2 block text-sm font-medium">Zoeken</label>
                 <Input
                   placeholder="Zoek in beschrijving..."
                   value={filters.search}
@@ -522,11 +518,11 @@ export const ActionManagement: React.FC = () => {
               {/* Status */}
               {currentView !== 'archive' && (
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Status</label>
+                  <label className="mb-2 block text-sm font-medium">Status</label>
                   <select
                     value={filters.status}
                     onChange={(e) => handleFilterChange('status', e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
+                    className="flex h-10 w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                   >
                     <option value="">Alle statussen</option>
                     <option value="Pending">Openstaand</option>
@@ -538,11 +534,11 @@ export const ActionManagement: React.FC = () => {
 
               {/* Priority */}
               <div>
-                <label className="text-sm font-medium mb-2 block">Prioriteit</label>
+                <label className="mb-2 block text-sm font-medium">Prioriteit</label>
                 <select
                   value={filters.priority}
                   onChange={(e) => handleFilterChange('priority', e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
+                  className="flex h-10 w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 >
                   <option value="">Alle prioriteiten</option>
                   <option value="Low">Laag</option>
@@ -553,24 +549,23 @@ export const ActionManagement: React.FC = () => {
 
               {/* Assigned To */}
               <div>
-                <label className="text-sm font-medium mb-2 block">Toegewezen aan</label>
+                <label className="mb-2 block text-sm font-medium">Toegewezen aan</label>
                 <select
                   value={filters.assigned_to}
                   onChange={(e) => handleFilterChange('assigned_to', e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
+                  className="flex h-10 w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 >
                   <option value="">Iedereen</option>
                   <option value="unassigned">Niet toegewezen</option>
-                  {availableUsers.map(user => (
-                    <option key={user.id} value={user.id}>{user.username}</option>
+                  {availableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.username}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Date Range - Mobile: Stack, Desktop: Side by side */}
-              <div className="col-span-1 sm:col-span-2 lg:col-span-2 xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-2 xl:col-span-2">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Van datum</label>
+                  <label className="mb-2 block text-sm font-medium">Van datum</label>
                   <Input
                     type="date"
                     value={filters.startDate}
@@ -579,7 +574,7 @@ export const ActionManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Tot datum</label>
+                  <label className="mb-2 block text-sm font-medium">Tot datum</label>
                   <Input
                     type="date"
                     value={filters.endDate}
@@ -589,30 +584,24 @@ export const ActionManagement: React.FC = () => {
                 </div>
               </div>
 
-              {/* Clear Filters Button */}
-              <div className="flex items-end col-span-1 sm:col-span-2 lg:col-span-1">
-                <Button 
-                  variant="outline" 
-                  onClick={clearFilters} 
-                  className="w-full touch-manipulation"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-end sm:col-span-2 lg:col-span-1">
+                <Button variant="outline" type="button" onClick={clearFilters} className="w-full touch-manipulation">
+                  <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  Wis filters
+                  Alle filters wissen
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </CollapsibleFiltersCard>
       )}
 
       {/* Mobile-optimized Actions List */}
-      <Card>
+      <Card className="border-slate-200/90 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
-              <CardTitle className="text-base sm:text-lg">
+              <CardTitle className="text-base font-semibold text-slate-900 sm:text-lg">
                 {currentView === 'pending' && 'Openstaande Acties'}
                 {currentView === 'all' && 'Alle Acties'}
                 {currentView === 'archive' && 'Actie Archief'}
@@ -669,7 +658,7 @@ export const ActionManagement: React.FC = () => {
               {actions.map((action) => (
                 <div
                   key={action.id}
-                  className="p-3 sm:p-4 border rounded-lg hover:shadow-sm transition-all duration-200 card-interactive cursor-pointer"
+                  className="card-interactive cursor-pointer rounded-xl border border-slate-200/90 bg-white p-3 transition-colors hover:bg-slate-50/95 sm:p-4"
                   onClick={() => handleActionClick(action)}
                 >
                   {/* Mobile-first Action Header */}

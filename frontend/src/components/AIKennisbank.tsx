@@ -233,21 +233,23 @@ export const AIKennisbank: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 px-0.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">📚 AI Kennisbank</h1>
-          <p className="text-gray-600">Deel kennis en stel vragen aan het Orakel</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">AI Kennisbank</h1>
+          <p className="mt-1 text-sm text-slate-600 sm:text-base">
+            Artikelen beheren en vragen aan het Orakel — op basis van jullie kennis
+          </p>
         </div>
         <Button
+          type="button"
           onClick={() => setIsAddingArticle(true)}
-          className="bg-primary hover:bg-primary/90"
+          className="h-11 w-full touch-manipulation shadow-sm sm:h-10 sm:w-auto"
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Artikel Toevoegen
+          Artikel toevoegen
         </Button>
       </div>
 
@@ -265,52 +267,52 @@ export const AIKennisbank: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+      {/* Tabs — zelfde segment-stijl als Acties */}
+      <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
           <button
+            type="button"
             onClick={() => setActiveTab('oracle')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors touch-manipulation sm:py-3 ${
               activeTab === 'oracle'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
-            Het Orakel
+            <span className="truncate">Het Orakel</span>
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('articles')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors touch-manipulation sm:py-3 ${
               activeTab === 'articles'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            Bibliotheek ({articles.length})
+            <span className="truncate">Bibliotheek ({articles.length})</span>
           </button>
-        </nav>
       </div>
 
       {/* Main Content */}
       {activeTab === 'oracle' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Het Orakel</CardTitle>
-            <CardDescription>
-              Stel vragen aan het AI Orakel. Het antwoordt op basis van alle artikelen in de kennisbank.
+        <Card className="border-slate-200/90 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold sm:text-lg">Het Orakel</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Antwoorden op basis van alle artikelen in de kennisbank.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {/* Chat History */}
-            <div 
+            <div
               ref={scrollRef}
-              className="h-96 overflow-y-auto space-y-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+              className="mb-4 max-h-[min(24rem,55svh)] min-h-[14rem] space-y-4 overflow-y-auto overscroll-contain rounded-lg border border-slate-200/80 bg-slate-50/80 p-3 sm:p-4"
             >
               {chatHistory.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-75">
@@ -471,12 +473,12 @@ export const AIKennisbank: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {/* Search Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Kennis Bibliotheek</h2>
-              <p className="text-gray-500">Doorzoek en beheer de collectieve SAC kennis.</p>
+              <h2 className="text-base font-semibold text-slate-900 sm:text-lg">Bibliotheek</h2>
+              <p className="mt-1 text-sm text-slate-600">Zoek en open artikelen</p>
             </div>
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,7 +496,7 @@ export const AIKennisbank: React.FC = () => {
 
           {/* Articles Grid */}
           {filteredArticles.length === 0 ? (
-            <Card>
+            <Card className="border border-slate-200/90 shadow-sm">
               <CardContent className="py-12 text-center">
                 <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -522,7 +524,7 @@ export const AIKennisbank: React.FC = () => {
               {filteredArticles.map((article) => (
                 <Card 
                   key={article.id} 
-                  className="hover:shadow-lg transition-shadow cursor-pointer"
+                  className="cursor-pointer border border-slate-200/90 transition-colors hover:bg-slate-50/90"
                   onClick={() => {
                     setSelectedArticle(article);
                     setIsArticleModalOpen(true);
@@ -555,7 +557,7 @@ export const AIKennisbank: React.FC = () => {
                         </div>
                         <span className="text-xs font-bold text-gray-500">Gedeeld door {article.author_name}</span>
                       </div>
-                      <span className="text-xs text-primary font-medium">Klik om te lezen →</span>
+                      <span className="text-xs font-medium text-slate-600">Openen</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -567,9 +569,23 @@ export const AIKennisbank: React.FC = () => {
 
       {/* Add Article Modal */}
       {isAddingArticle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between border-b">
+        <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden">
+          <button
+            type="button"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            aria-label="Sluiten"
+            onClick={() => {
+              setIsAddingArticle(false);
+              setNewArticle({ title: '', content: '', role: 'Algemeen' });
+              setError('');
+            }}
+          />
+          <div className="relative mx-auto flex min-h-full justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
+            <Card
+              className="relative my-auto w-full max-w-2xl flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] flex-col overflow-hidden rounded-2xl border-slate-200/90 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+            <CardHeader className="shrink-0 flex flex-row items-center justify-between border-b border-slate-100 bg-slate-50/90">
               <div className="flex items-center gap-3">
                 <div className="bg-primary p-2 rounded-lg">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -592,7 +608,8 @@ export const AIKennisbank: React.FC = () => {
               </button>
             </CardHeader>
             
-            <form onSubmit={handleAddArticle} className="p-6 space-y-5">
+            <form onSubmit={handleAddArticle} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
@@ -636,7 +653,9 @@ export const AIKennisbank: React.FC = () => {
                 />
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-50">
+              </div>
+
+              <div className="flex shrink-0 gap-3 border-t border-slate-100 bg-slate-50/80 px-4 py-3 sm:p-6">
                 <Button 
                   type="button"
                   variant="outline"
@@ -657,15 +676,29 @@ export const AIKennisbank: React.FC = () => {
                 </Button>
               </div>
             </form>
-          </Card>
+            </Card>
+          </div>
         </div>
       )}
 
       {/* Article Detail Modal */}
       {isArticleModalOpen && selectedArticle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between border-b sticky top-0 bg-white z-10">
+        <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden">
+          <button
+            type="button"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            aria-label="Sluiten"
+            onClick={() => {
+              setIsArticleModalOpen(false);
+              setSelectedArticle(null);
+            }}
+          />
+          <div className="relative mx-auto flex min-h-full justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
+          <Card
+            className="relative my-auto w-full max-w-3xl max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] flex flex-col overflow-hidden rounded-2xl border-slate-200/90 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardHeader className="shrink-0 flex flex-row items-center justify-between border-b border-slate-100 bg-slate-50/90">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold uppercase rounded-md">
@@ -693,7 +726,7 @@ export const AIKennisbank: React.FC = () => {
               </button>
             </CardHeader>
             
-            <CardContent className="p-6">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
               <div className="prose prose-sm max-w-none">
                 <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                   {selectedArticle.content}
@@ -713,6 +746,7 @@ export const AIKennisbank: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+          </div>
         </div>
       )}
     </div>

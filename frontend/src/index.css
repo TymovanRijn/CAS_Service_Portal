@@ -73,6 +73,14 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Voorkom rubber-band scroll van de hele pagina in standalone PWA mode.
+     Geldt alleen onder lg-breakpoint zodat desktop ongemoeid blijft. */
+  @media (max-width: 1023px) {
+    html, body {
+      overscroll-behavior-y: contain;
+    }
+  }
+
   /* Better touch targets for mobile */
   button, [role="button"], input[type="submit"], input[type="button"] {
     -webkit-appearance: none;
@@ -379,25 +387,84 @@
     }
   }
 
+  /* ───── PWA: page transitions ───── */
+  /* Korte fade-up bij page change. Alleen op mobiel; desktop voelt al snel. */
+  @media (max-width: 1023px) {
+    .page-fade {
+      animation: page-fade-in 180ms cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+  }
+
+  @keyframes page-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ───── PWA: skeleton shimmer ───── */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: hsl(0 0% 92%);
+    border-radius: 0.5rem;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: skeleton-shimmer 1.4s infinite;
+  }
+  @keyframes skeleton-shimmer {
+    100% { transform: translateX(100%); }
+  }
+
+  /* ───── PWA: native-feeling tap feedback ───── */
+  .tap-scale {
+    transition: transform 120ms cubic-bezier(0.2, 0.6, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tap-scale:active {
+    transform: scale(0.96);
+  }
+
+  /* ───── PWA: bottom-nav active pill ───── */
+  /* Deze klasse wordt alleen gebruikt door mobile bottom nav. */
+  .nav-pill-active {
+    transition: background-color 200ms cubic-bezier(0.2, 0.6, 0.2, 1),
+                color 200ms cubic-bezier(0.2, 0.6, 0.2, 1),
+                transform 200ms cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+
   /* Reduced motion support */
   @media (prefers-reduced-motion: reduce) {
     .image-preview,
     .upload-area,
     .attachment-card,
     .transition-all-smooth,
-    .card-interactive {
+    .card-interactive,
+    .tap-scale,
+    .nav-pill-active {
       transition: none;
     }
 
     .modal-enter,
-    .modal-exit {
+    .modal-exit,
+    .page-fade,
+    .skeleton::after {
       animation: none;
     }
 
     .image-preview:hover,
     .upload-area:hover,
     .attachment-card:hover,
-    .card-interactive:hover {
+    .card-interactive:hover,
+    .tap-scale:active {
       transform: none;
     }
   }

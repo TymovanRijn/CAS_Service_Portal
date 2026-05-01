@@ -16,8 +16,8 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (onSidebarToggle) {
@@ -26,20 +26,22 @@ export const Navigation: React.FC<NavigationProps> = ({
   }, [isCollapsed, onSidebarToggle]);
 
   useEffect(() => {
-    if (!userMenuOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
+    if (!accountOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
       }
     };
-    document.addEventListener('click', onDoc, true);
-    return () => document.removeEventListener('click', onDoc, true);
-  }, [userMenuOpen]);
+    document.addEventListener('click', handler, true);
+    return () => document.removeEventListener('click', handler, true);
+  }, [accountOpen]);
 
   if (!user) return null;
 
+  const avatarInitial =
+    user.username.slice(0, 2).toUpperCase() || '?';
+
   const navigationItems = getNavigationItems(user);
-  const pageTitle = getPageTitle(currentPage, user);
   const tabLabel = (item: (typeof navigationItems)[0]) => item.shortLabel ?? item.name;
 
   const handlePageChange = (page: string) => {
@@ -61,96 +63,121 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <>
-      {/* Mobiel: zelfde informatiearchitectuur als desktop — titelbalk + tabbalk, geen aparte “drawer app” */}
+      {/* Mobiel: compacte app-header + safe area (desktop: verborgen) */}
       <header
-        className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm safe-area-top"
-        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))' }}
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-slate-200/50 bg-white/80 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/70"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="flex h-12 items-center justify-between gap-2 pl-3 pr-2 sm:pl-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">CAS Portal</p>
-            <h1 className="truncate text-base font-semibold text-foreground leading-tight">{pageTitle}</h1>
-          </div>
-          <div className="relative flex-shrink-0" ref={userMenuRef}>
+        <div className="relative mx-auto flex h-[3rem] max-w-lg items-center gap-2 px-3 sm:px-4">
+          <div className="relative shrink-0" ref={accountRef}>
             <button
               type="button"
-              onClick={() => setUserMenuOpen((o) => !o)}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-800 touch-manipulation"
-              aria-expanded={userMenuOpen}
-              aria-label="Accountmenu"
+              id="mobile-account-trigger"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAccountOpen((o) => !o);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[11px] font-bold text-slate-800 shadow-sm transition hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              aria-expanded={accountOpen}
+              aria-haspopup="menu"
+              aria-controls="mobile-account-menu"
             >
-              <span className="max-w-[3rem] truncate">{user.username.slice(0, 2).toUpperCase()}</span>
+              {avatarInitial}
             </button>
-            {userMenuOpen && (
-              <div className="absolute right-0 z-50 mt-1 w-64 rounded-lg border border-gray-200 bg-white py-2 text-left shadow-lg">
-                <p className="px-3 text-sm font-medium text-gray-900 truncate">{user.username}</p>
-                <p className="px-3 text-xs text-gray-500 truncate border-b border-gray-100 pb-2 mb-2">
-                  {user.email}
-                </p>
-                <p className="px-3 pb-2">
+            {accountOpen && (
+              <div
+                id="mobile-account-menu"
+                role="menu"
+                aria-labelledby="mobile-account-trigger"
+                className="absolute left-0 top-full z-[60] mt-1 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-slate-200/90 bg-white py-2 shadow-lg"
+              >
+                <div className="border-b border-slate-100 px-3 pb-2">
+                  <p className="truncate text-sm font-medium text-slate-900">{user.username}</p>
+                  <p className="truncate text-xs text-slate-500">{user.email}</p>
                   <span
-                    className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getRoleColor(
-                      user.role_name
-                    )}`}
+                    className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getRoleColor(user.role_name)}`}
                   >
                     {user.role_name}
                   </span>
-                </p>
-                <Button
-                  variant="outline"
-                  className="mx-2 w-[calc(100%-1rem)] justify-center"
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    logout();
-                  }}
-                >
-                  Uitloggen
-                </Button>
+                </div>
+                <div className="p-2">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-center gap-2"
+                    role="menuitem"
+                    onClick={() => {
+                      setAccountOpen(false);
+                      logout();
+                    }}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                    Uitloggen
+                  </Button>
+                </div>
               </div>
             )}
           </div>
+          <h1 className="min-w-0 flex-1 truncate text-center text-[0.9375rem] font-semibold leading-tight tracking-[-0.02em] text-slate-900">
+            {getPageTitle(currentPage, user)}
+          </h1>
+          <span className="h-9 w-9 shrink-0 opacity-0" aria-hidden />
         </div>
       </header>
 
-      <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
-        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
-        aria-label="Hoofdnavigatie"
-      >
-        <div className="scrollbar-hide flex max-w-full justify-start gap-0.5 overflow-x-auto px-1 py-1.5">
-          {navigationItems.map((item) => {
-            const isActive = currentPage === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handlePageChange(item.id)}
-                aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-[3.5rem] min-w-[3.6rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 touch-manipulation ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-gray-600 active:bg-gray-100'
-                }`}
-              >
-                <span
-                  className={
-                    isActive ? 'text-primary-foreground [&>svg]:text-primary-foreground' : 'text-gray-500'
-                  }
-                >
-                  {item.icon}
-                </span>
-                <span
-                  className={`max-w-[4.2rem] text-center text-[10px] font-medium leading-tight ${
-                    isActive ? 'text-primary-foreground' : 'text-gray-600'
-                  }`}
-                >
-                  {tabLabel(item)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Mobiel: drijvende dock (geen rand-tot-rand „website“-balk) */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 lg:hidden">
+        <nav
+          className="pointer-events-auto mx-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
+          aria-label="Hoofdnavigatie"
+        >
+          <div className="overflow-hidden rounded-[1.625rem] border border-white/90 bg-white/92 shadow-[0_12px_40px_-4px_rgba(15,23,42,0.14)] ring-1 ring-slate-900/[0.06] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/88">
+            {/* Gecentreerde tabstrip; bij veel items horizontaal scrollen */}
+            <div className="-mx-0 flex justify-center overflow-x-auto overscroll-x-contain px-1 py-2 [-webkit-overflow-scrolling:touch]">
+              <div className="scrollbar-hide flex w-max max-w-[min(100%,100vw-3rem)] snap-x snap-mandatory flex-nowrap items-stretch gap-0.5">
+              {navigationItems.map((item) => {
+                const isActive = currentPage === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handlePageChange(item.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`tap-scale flex min-h-[4rem] min-w-[4rem] shrink-0 snap-start snap-always touch-manipulation flex-col items-center justify-center gap-0.5 rounded-2xl px-2 transition-colors duration-200 motion-reduce:transition-none ${
+                      isActive
+                        ? 'bg-slate-900 text-white shadow-inner'
+                        : 'text-slate-500 hover:bg-slate-100/90 active:bg-slate-100'
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`flex [&>svg]:h-[1.375rem] [&>svg]:w-[1.375rem] [&>svg]:shrink-0 ${
+                        isActive ? '[&>svg]:text-white' : '[&>svg]:text-slate-500'
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+                    <span
+                      className={`max-w-[4.75rem] text-center text-[10px] font-semibold leading-[1.1] tracking-[-0.01em] ${
+                        isActive ? 'text-white' : 'text-slate-500'
+                      }`}
+                    >
+                      {tabLabel(item)}
+                    </span>
+                  </button>
+                );
+              })}
+              </div>
+            </div>
+          </div>
+        </nav>
+      </div>
 
       <div
         className={`hidden lg:flex fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out shadow-sm ${
