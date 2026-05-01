@@ -113,7 +113,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       </header>
 
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-white/90 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] backdrop-blur-md"
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
         aria-label="Hoofdnavigatie"
       >

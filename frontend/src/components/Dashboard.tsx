@@ -67,6 +67,63 @@ interface User {
   role_name: string;
 }
 
+type SacStatVariant = 'blue' | 'red' | 'orange' | 'green';
+
+const sacStatStyles: Record<
+  SacStatVariant,
+  { gradient: string; value: string; iconWrap: string; label: string }
+> = {
+  blue: {
+    gradient: 'from-sky-50/90 to-white',
+    value: 'text-sky-700',
+    iconWrap: 'bg-sky-100/90 text-sky-600',
+    label: 'text-sky-900/65',
+  },
+  red: {
+    gradient: 'from-rose-50/90 to-white',
+    value: 'text-rose-700',
+    iconWrap: 'bg-rose-100/90 text-rose-600',
+    label: 'text-rose-900/65',
+  },
+  orange: {
+    gradient: 'from-amber-50/90 to-white',
+    value: 'text-amber-800',
+    iconWrap: 'bg-amber-100/90 text-amber-700',
+    label: 'text-amber-900/65',
+  },
+  green: {
+    gradient: 'from-emerald-50/90 to-white',
+    value: 'text-emerald-700',
+    iconWrap: 'bg-emerald-100/90 text-emerald-600',
+    label: 'text-emerald-900/65',
+  },
+};
+
+function SacStatTile({
+  label,
+  value,
+  variant,
+  icon,
+}: {
+  label: string;
+  value: number;
+  variant: SacStatVariant;
+  icon: React.ReactNode;
+}) {
+  const s = sacStatStyles[variant];
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border border-black/[0.06] bg-gradient-to-br ${s.gradient} p-3.5 shadow-sm ring-1 ring-black/[0.03] transition-transform active:scale-[0.98] md:p-4`}
+    >
+      <div className={`absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-xl ${s.iconWrap}`}>
+        {icon}
+      </div>
+      <p className={`pr-12 text-[11px] font-semibold uppercase tracking-wide ${s.label}`}>{label}</p>
+      <p className={`mt-1 text-2xl font-bold tabular-nums tracking-tight ${s.value}`}>{value}</p>
+    </div>
+  );
+}
+
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [todaysIncidents, setTodaysIncidents] = useState<Incident[]>([]);
@@ -353,119 +410,107 @@ export const Dashboard: React.FC = () => {
   // SAC Dashboard - Show operational data
   if (user.role_name === 'SAC' || user.role_name === 'Admin') {
     return (
-      <div className="space-y-6">
-          {/* Welcome Section */}
-          <div className="mb-6">
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+      <div className="space-y-4 pb-20 md:space-y-6 md:pb-0">
+          {/* Welcome — compact on phone, full on desktop */}
+          <section className="rounded-2xl border border-border/70 bg-gradient-to-br from-muted/60 via-background to-background p-4 shadow-sm md:p-5">
+            <div className="flex gap-3 md:gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary md:h-12 md:w-12">
                 {getRoleIcon(user.role_name)}
               </div>
-              <div>
-                <h2 className="text-xl font-bold">Welkom terug, {user.username}!</h2>
-                <p className="text-muted-foreground">{user.role_description}</p>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-[15px] font-semibold leading-snug md:text-xl md:font-bold">
+                  Welkom terug,{' '}
+                  <span className="break-words">{user.username}</span>
+                </h2>
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground md:line-clamp-none md:text-sm">
+                  {user.role_description}
+                </p>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Vandaag Gemeld</p>
-                    <p className="text-2xl font-bold text-blue-600">{stats.todayIncidents}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Open Incidenten</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.openIncidents}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">In Behandeling</p>
-                    <p className="text-2xl font-bold text-orange-600">{stats.inProgressIncidents}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Vandaag Opgelost</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.resolvedToday}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Stats — 2×2 on mobile, row of 4 on md+ */}
+          <section aria-label="Incident statistieken">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+              <SacStatTile
+                label="Vandaag gemeld"
+                value={stats.todayIncidents}
+                variant="blue"
+                icon={
+                  <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                }
+              />
+              <SacStatTile
+                label="Open incidenten"
+                value={stats.openIncidents}
+                variant="red"
+                icon={
+                  <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                }
+              />
+              <SacStatTile
+                label="In behandeling"
+                value={stats.inProgressIncidents}
+                variant="orange"
+                icon={
+                  <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                }
+              />
+              <SacStatTile
+                label="Vandaag opgelost"
+                value={stats.resolvedToday}
+                variant="green"
+                icon={
+                  <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                }
+              />
+            </div>
+          </section>
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
             {/* Left Column - Today's Incidents */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Incidenten van Vandaag</CardTitle>
-                    <CardDescription>Alle incidenten die vandaag zijn gemeld</CardDescription>
+            <Card className="overflow-hidden border-border/80 shadow-md ring-1 ring-black/[0.04]">
+              <CardHeader className="space-y-1 p-4 pb-3 sm:p-6 sm:pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <CardTitle className="text-base font-semibold md:text-lg">Incidenten van vandaag</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">Alles wat vandaag is gemeld</CardDescription>
                   </div>
-                  <Button size="sm" onClick={() => setIsCreateIncidentModalOpen(true)}>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <Button
+                    size="sm"
+                    className="hidden shrink-0 md:inline-flex"
+                    onClick={() => setIsCreateIncidentModalOpen(true)}
+                  >
+                    <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Nieuw Incident
+                    Nieuw incident
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="max-h-96 overflow-y-auto space-y-3">
+              <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+                <div className="max-h-[min(24rem,55vh)] space-y-2 overflow-y-auto overscroll-contain sm:max-h-96 sm:space-y-3">
                   {todaysIncidents.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 py-10 text-center text-muted-foreground">
+                      <svg className="mx-auto mb-3 h-10 w-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      <p>Geen incidenten vandaag gemeld</p>
+                      <p className="text-sm">Geen incidenten vandaag</p>
                     </div>
                   ) : (
                     todaysIncidents.map((incident) => (
                       <div 
                         key={incident.id} 
-                        className="p-3 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer hover:bg-muted/10"
+                        className="cursor-pointer rounded-xl border border-border/60 bg-card p-3 transition hover:border-border hover:shadow-sm active:scale-[0.995]"
                         onClick={() => handleIncidentClick(incident)}
                       >
                         <div className="flex items-start justify-between mb-2">
@@ -513,35 +558,35 @@ export const Dashboard: React.FC = () => {
             </Card>
 
             {/* Right Column - Pending Actions */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Openstaande Acties</CardTitle>
-                    <CardDescription>Acties die nog uitgevoerd moeten worden</CardDescription>
+            <Card className="overflow-hidden border-border/80 shadow-md ring-1 ring-black/[0.04]">
+              <CardHeader className="space-y-1 p-4 pb-3 sm:p-6 sm:pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <CardTitle className="text-base font-semibold md:text-lg">Openstaande acties</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">Nog uit te voeren</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setIsCreateActionModalOpen(true)}>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <Button variant="outline" size="sm" className="shrink-0" onClick={() => setIsCreateActionModalOpen(true)}>
+                    <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Nieuwe Actie
+                    Nieuwe actie
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="max-h-96 overflow-y-auto space-y-3">
+              <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
+                <div className="max-h-[min(24rem,55vh)] space-y-2 overflow-y-auto overscroll-contain sm:max-h-96 sm:space-y-3">
                   {pendingActions.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 py-10 text-center text-muted-foreground">
+                      <svg className="mx-auto mb-3 h-10 w-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
-                      <p>Geen openstaande acties</p>
+                      <p className="text-sm">Geen openstaande acties</p>
                     </div>
                   ) : (
                     pendingActions.map((action) => (
                       <div 
                         key={action.id} 
-                        className="p-3 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer"
+                        className="cursor-pointer rounded-xl border border-border/60 bg-card p-3 transition hover:border-border hover:shadow-sm active:scale-[0.995]"
                         onClick={() => handleActionClick(action)}
                       >
                         <div className="flex items-start justify-between mb-2">
@@ -634,6 +679,21 @@ export const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+
+        <button
+          type="button"
+          onClick={() => setIsCreateIncidentModalOpen(true)}
+          className="fixed right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-black/25 ring-4 ring-zinc-50 transition active:scale-95 md:hidden dark:ring-zinc-950"
+          style={{
+            bottom: 'max(5.25rem, calc(env(safe-area-inset-bottom, 0px) + 4.5rem))',
+          }}
+          aria-label="Nieuw incident melden"
+        >
+          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+
         {/* Create Incident Modal */}
         <CreateIncidentModal
           isOpen={isCreateIncidentModalOpen}

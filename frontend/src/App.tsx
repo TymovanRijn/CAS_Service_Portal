@@ -33,7 +33,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100/90">
       {/* Navigation Sidebar */}
       <Navigation 
         currentPage={currentPage} 
