@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { SelectField } from './ui/select-field';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+
+const FIELD_LABEL =
+  'mb-1.5 ml-1 block text-xs font-bold uppercase tracking-widest text-slate-500';
+const TEXTAREA_FIELD =
+  'w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-shadow placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 interface Incident {
   id: number;
@@ -37,28 +42,34 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
   onClose,
   onSuccess,
   availableUsers,
-  preselectedIncidentId
+  preselectedIncidentId,
 }) => {
   const [formData, setFormData] = useState({
     incident_id: preselectedIncidentId?.toString() || '',
     action_description: '',
-    assigned_to: ''
+    assigned_to: '',
   });
-  
+
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch incidents when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen) {
       fetchIncidents();
-      // Reset form when modal opens
       setFormData({
         incident_id: preselectedIncidentId?.toString() || '',
         action_description: '',
-        assigned_to: ''
+        assigned_to: '',
       });
       setError('');
     }
@@ -69,21 +80,17 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${BACKEND_URL}/api/incidents`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include'
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Filter for open incidents only
-        const openIncidents = data.incidents?.filter((incident: Incident) => 
-          incident.status !== 'Closed'
-        ) || [];
+        const openIncidents =
+          data.incidents?.filter((incident: Incident) => incident.status !== 'Closed') ||
+          [];
         setIncidents(openIncidents);
       } else {
-        console.error('Failed to fetch incidents');
         setError('Fout bij het laden van incidenten');
       }
     } catch (err) {
@@ -94,12 +101,11 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +113,6 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
     setIsSubmitting(true);
     setError('');
 
-    // Validation
     if (!formData.incident_id) {
       setError('Incident is verplicht');
       setIsSubmitting(false);
@@ -121,24 +126,21 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
 
     try {
       const token = localStorage.getItem('token');
-      
       const response = await fetch(`${BACKEND_URL}/api/actions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({
-          incident_id: parseInt(formData.incident_id),
+          incident_id: parseInt(formData.incident_id, 10),
           action_description: formData.action_description,
-          assigned_to: formData.assigned_to ? parseInt(formData.assigned_to) : null
+          assigned_to: formData.assigned_to ? parseInt(formData.assigned_to, 10) : null,
         }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('Action created:', data);
         onSuccess();
         onClose();
       } else {
@@ -153,204 +155,224 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'high': return 'text-red-600';
-      case 'medium': return 'text-orange-600';
-      case 'low': return 'text-green-600';
-      default: return 'text-gray-600';
+  const prioClass = (p: string) => {
+    switch (p?.toLowerCase()) {
+      case 'high':
+        return 'text-red-700';
+      case 'medium':
+        return 'text-orange-700';
+      case 'low':
+        return 'text-emerald-700';
+      default:
+        return 'text-slate-700';
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'open': return 'text-blue-600';
-      case 'in progress': return 'text-yellow-600';
-      case 'closed': return 'text-green-600';
-      default: return 'text-gray-600';
-    }
+  const statusNl = (s: string) => {
+    const x = String(s || '').toLowerCase();
+    if (x === 'open') return 'Open';
+    if (x === 'in progress') return 'In behandeling';
+    if (x === 'closed') return 'Gesloten';
+    return s || '—';
   };
 
   if (!isOpen) return null;
 
+  const selectedIncident = incidents.find((i) => i.id.toString() === formData.incident_id);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">Nieuwe Actie Aanmaken</CardTitle>
-                <CardDescription>
-                  Maak een nieuwe actie aan en wijs deze toe aan een incident
+    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden">
+      <button
+        type="button"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        aria-label="Sluiten"
+        onClick={() => {
+          if (!isSubmitting) onClose();
+        }}
+      />
+      <div className="relative mx-auto flex min-h-full justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
+        <Card
+          className="relative my-auto flex w-full max-w-2xl max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] flex-col overflow-hidden rounded-2xl border-border shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <CardHeader className="shrink-0 flex flex-row items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-4 sm:px-6">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="shrink-0 rounded-lg bg-primary p-2 shadow-sm">
+                <svg
+                  className="h-5 w-5 text-primary-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                  />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <CardTitle className="text-xl font-semibold tracking-tight">Nieuwe actie</CardTitle>
+                <CardDescription className="mt-1 hidden text-sm sm:block">
+                  Koppel een concrete actie aan een openstaand incident.
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </Button>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+              aria-label="Sluiten"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </CardHeader>
 
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <svg className="animate-spin h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Formulier laden...</span>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {error && (
-                  <div className="p-3 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md">
-                    <div className="flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {error}
-                    </div>
-                  </div>
-                )}
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 pb-10 sm:px-6 sm:py-6 sm:pb-12">
+              {error ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
+              ) : null}
 
-                {/* Incident Selection - Required */}
-                <div className="space-y-2">
-                  <label htmlFor="incident_id" className="text-sm font-medium">
-                    Incident <span className="text-red-500">*</span>
+              {isLoading ? (
+                <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-4 text-sm text-muted-foreground">
+                  <svg className="h-5 w-5 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Openstaande incidenten laden…
+                </div>
+              ) : null}
+
+              <div className="space-y-5">
+                <div>
+                  <label htmlFor="action-incident" className={FIELD_LABEL}>
+                    Incident <span className="font-semibold lowercase text-red-500">*</span>
                   </label>
                   <SelectField
-                    id="incident_id"
+                    id="action-incident"
                     name="incident_id"
                     value={formData.incident_id}
                     onChange={handleInputChange}
                     required
-                    disabled={isSubmitting || !!preselectedIncidentId}
+                    disabled={isSubmitting || !!preselectedIncidentId || isLoading}
                   >
-                    <option value="">Selecteer incident...</option>
-                    {incidents.map(incident => (
+                    <option value="">Kies incident…</option>
+                    {incidents.map((incident) => (
                       <option key={incident.id} value={incident.id}>
-                        #{incident.id} - {incident.title} 
-                        ({incident.priority} - {incident.status})
+                        #{incident.id} — {incident.title} ({incident.priority} · {statusNl(incident.status)})
                       </option>
                     ))}
                   </SelectField>
-                  {formData.incident_id && (
-                    <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                      {(() => {
-                        const selectedIncident = incidents.find(i => i.id.toString() === formData.incident_id);
-                        if (selectedIncident) {
-                          return (
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <span className={`text-sm font-medium ${getPriorityColor(selectedIncident.priority)}`}>
-                                  {selectedIncident.priority} Prioriteit
-                                </span>
-                                <span className="text-gray-300">•</span>
-                                <span className={`text-sm font-medium ${getStatusColor(selectedIncident.status)}`}>
-                                  {selectedIncident.status}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600">{selectedIncident.description}</p>
-                              <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                {selectedIncident.location_name && (
-                                  <span>{selectedIncident.location_name}</span>
-                                )}
-                                {selectedIncident.category_name && (
-                                  <span>{selectedIncident.category_name}</span>
-                                )}
-                                <span>Door {selectedIncident.created_by_name}</span>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-                  )}
                 </div>
 
-                {/* Action Description - Required */}
-                <div className="space-y-2">
-                  <label htmlFor="action_description" className="text-sm font-medium">
-                    Actie Beschrijving <span className="text-red-500">*</span>
+                {selectedIncident ? (
+                  <div className="rounded-xl border border-border bg-muted/25 p-4 sm:p-5">
+                    <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Geselecteerd dossier</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                      <span className={`font-semibold ${prioClass(selectedIncident.priority)}`}>{selectedIncident.priority}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span className="font-medium text-slate-900">{statusNl(selectedIncident.status)}</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-700">{selectedIncident.description || 'Geen beschrijving.'}</p>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                      {selectedIncident.location_name ? <span>{selectedIncident.location_name}</span> : null}
+                      {selectedIncident.category_name ? <span>{selectedIncident.category_name}</span> : null}
+                      {selectedIncident.created_by_name ? <span>Door {selectedIncident.created_by_name}</span> : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div>
+                  <label htmlFor="action-description" className={FIELD_LABEL}>
+                    Concrete actiestap{' '}
+                    <span className="font-semibold lowercase text-red-500">*</span>
                   </label>
                   <textarea
-                    id="action_description"
+                    id="action-description"
                     name="action_description"
-                    placeholder="Beschrijf de actie die ondernomen moet worden..."
+                    placeholder="Wat moet er gebeuren en wanneer? Bijv. service party nabellen voor vervanging, terugmelding tegen 14:00."
                     value={formData.action_description}
                     onChange={handleInputChange}
+                    autoFocus={!!preselectedIncidentId}
                     required
                     disabled={isSubmitting}
-                    rows={4}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                    rows={5}
+                    className={TEXTAREA_FIELD}
                   />
                 </div>
 
-                {/* Assign To - Optional */}
-                <div className="space-y-2">
-                  <label htmlFor="assigned_to" className="text-sm font-medium">
-                    Toewijzen aan <span className="text-muted-foreground">(optioneel)</span>
+                <div>
+                  <label htmlFor="action-assign" className={FIELD_LABEL}>
+                    Toewijzen aan{' '}
+                    <span className="font-normal normal-case tracking-normal text-muted-foreground">(optioneel)</span>
                   </label>
                   <SelectField
-                    id="assigned_to"
+                    id="action-assign"
                     name="assigned_to"
                     value={formData.assigned_to}
                     onChange={handleInputChange}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isLoading}
                   >
-                    <option value="">Niet toegewezen (iedereen kan oppakken)</option>
-                    {availableUsers.map(user => (
+                    <option value="">Open pool — elk teamlid kan oppakken</option>
+                    {availableUsers.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.username} ({user.role_name})
                       </option>
                     ))}
                   </SelectField>
-                  <p className="text-xs text-gray-500">
-                    Als je geen persoon selecteert, kan elke SAC de actie oppakken
+                  <p className="mt-1.5 ml-1 text-[11px] text-muted-foreground">
+                    Zonder toewijzing blijft de actie voor iedereen zichtbaar in de werklijst.
                   </p>
                 </div>
+              </div>
+            </div>
 
-                {/* Form Actions */}
-                <div className="flex items-center justify-end space-x-3 pt-4 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                  >
-                    Annuleren
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Actie aanmaken...
-                      </>
-                    ) : (
-                      'Actie Aanmaken'
-                    )}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </CardContent>
+            <div className="flex shrink-0 gap-3 border-t border-border bg-muted/30 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4 sm:pb-4">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting}
+                onClick={onClose}
+                className="min-h-11 flex-1 touch-manipulation"
+              >
+                Annuleren
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isSubmitting || isLoading}
+                className="min-h-11 flex-[2] touch-manipulation"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Aanmaken…
+                  </span>
+                ) : (
+                  'Actie aanmaken'
+                )}
+              </Button>
+            </div>
+          </form>
         </Card>
       </div>
     </div>
   );
-}; 
+};
