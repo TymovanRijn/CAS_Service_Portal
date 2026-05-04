@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const fs = require('fs');
 const puppeteer = require('puppeteer');
 
 /** Veilige tekst voor HTML/PDF */
@@ -15,6 +16,92 @@ const normalizeLoc = (name) => {
   const n = (name || '').trim();
   return n === '' ? 'Algemeen' : n;
 };
+
+/** Systeem-Chromium als de gebundelde browser ontbreekt of crasht (typisch op Linux servers). */
+function resolveChromiumExecutable() {
+  const envPath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_PATH;
+  if (envPath && fs.existsSync(envPath)) {
+    return envPath;
+  }
+  const candidates = [
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+/**
+ * PDF via Puppeteer. Gooit bij falen zodat de caller HTML-fallback kan sturen.
+ */
+async function renderPdfWithPuppeteer(htmlContent) {
+  const executablePath = resolveChromiumExecutable();
+
+  const launchOpts = {
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--font-render-hinting=none',
+    ],
+    timeout: 90000,
+  };
+  if (executablePath) {
+    launchOpts.executablePath = executablePath;
+  }
+
+  let browser;
+  try {
+    browser = await puppeteer.launch(launchOpts);
+    const page = await browser.newPage();
+    await page.setJavaScriptEnabled(false);
+    await page.setViewport({
+      width: 1280,
+      height: 720,
+      deviceScaleFactor: 1,
+    });
+    await page.setContent(htmlContent, {
+      waitUntil: 'load',
+      timeout: 60000,
+    });
+    await new Promise((r) => setTimeout(r, 400));
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      landscape: false,
+      margin: {
+        top: '10mm',
+        right: '10mm',
+        bottom: '10mm',
+        left: '10mm',
+      },
+    });
+
+    await page.close().catch(() => {});
+
+    if (!pdfBuffer || !pdfBuffer.length) {
+      throw new Error('PDF buffer leeg');
+    }
+    return pdfBuffer;
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+  }
+}
 
 // Generate daily report for a specific date
 const generateDailyReport = async (req, res) => {
@@ -91,171 +178,42 @@ const generateDailyReport = async (req, res) => {
     `;
     
     const statsResult = await client.query(statsQuery, [date]);
-    const stats = statsResult.rows[0];
+    const row = statsResult.rows[0] || {};
+    const stats = {
+      incidents_created: Number(row.incidents_created) || 0,
+      incidents_closed: Number(row.incidents_closed) || 0,
+      actions_created: Number(row.actions_created) || 0,
+      actions_completed: Number(row.actions_completed) || 0,
+      high_priority_incidents: Number(row.high_priority_incidents) || 0,
+      medium_priority_incidents: Number(row.medium_priority_incidents) || 0,
+      low_priority_incidents: Number(row.low_priority_incidents) || 0,
+    };
 
     client.release();
 
-    // Generate HTML for PDF
     const htmlContent = generateReportHTML({
       date,
       incidents,
       actions,
-      stats
+      stats,
     });
 
-    // Generate PDF using Puppeteer with retry mechanism
-    let browser;
-    let page;
     let pdfBuffer;
-    const maxRetries = 1; // Reduce retries to fail faster
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`Starting PDF generation (attempt ${attempt}/${maxRetries})...`);
-        
-        // Optional: PUPPETEER_EXECUTABLE_PATH if bundled Chromium fails to start (see https://pptr.dev/troubleshooting)
-        const launchOpts = {
-          headless: 'new',
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage'
-          ],
-          timeout: 30000
-        };
-        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-          launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-        }
-        browser = await puppeteer.launch(launchOpts);
-        
-        console.log('Browser launched successfully');
-        
-        page = await browser.newPage();
-        
-        // Disable JavaScript to prevent crashes
-        await page.setJavaScriptEnabled(false);
-        
-        // Set viewport
-        await page.setViewport({
-          width: 1920,
-          height: 1080,
-          deviceScaleFactor: 1
-        });
-        
-        console.log('Setting HTML content (length:', htmlContent.length, ')...');
-        
-        // Set content with simple wait condition
-        await page.setContent(htmlContent, {
-          waitUntil: 'load',
-          timeout: 30000
-        });
-        
-        console.log('Content loaded, waiting for rendering...');
-        
-        // Short wait for rendering
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log('Generating PDF...');
-        
-        // Generate PDF with timeout
-        pdfBuffer = await Promise.race([
-          page.pdf({
-            format: 'A4',
-            printBackground: true,
-            landscape: false,
-            margin: {
-              top: '10mm',
-              right: '10mm',
-              bottom: '10mm',
-              left: '10mm'
-            }
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('PDF generation timeout after 30 seconds')), 30000)
-          )
-        ]);
-        
-        console.log('PDF generated successfully, size:', pdfBuffer ? pdfBuffer.length : 0);
-        
-        // Success - break out of retry loop
-        break;
-        
-      } catch (attemptError) {
-        console.error(`Attempt ${attempt} failed:`, attemptError.message);
-        
-        // Clean up failed attempt quickly
-        try {
-          if (page) {
-            try {
-              if (!page.isClosed()) {
-                await Promise.race([
-                  page.close(),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
-                ]).catch(() => {});
-              }
-            } catch (e) {
-              // Ignore
-            }
-            page = null;
-          }
-        } catch (e) {
-          // Ignore
-        }
-        
-        try {
-          if (browser) {
-            await Promise.race([
-              browser.close(),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
-            ]).catch(() => {});
-            browser = null;
-          }
-        } catch (e) {
-          // Ignore
-        }
-        
-        // If last attempt, throw error
-        if (attempt === maxRetries) {
-          throw new Error(`PDF generation failed after ${maxRetries} attempts: ${attemptError.message}`);
-        }
-        
-        // No retry wait needed if maxRetries is 1
-        if (attempt < maxRetries) {
-          console.log(`Waiting 1 second before retry (attempt ${attempt + 1}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    }
-    
-    if (!pdfBuffer) {
-      throw new Error('Failed to generate PDF buffer after all attempts');
-    }
-    
-    console.log('PDF generated successfully, size:', pdfBuffer.length);
-    
-    // Clean up before sending response
     try {
-      if (page && !page.isClosed()) {
-        await page.close().catch(() => {});
-      }
-    } catch (e) {
-      console.error('Error closing page:', e);
+      pdfBuffer = await renderPdfWithPuppeteer(htmlContent);
+    } catch (pdfErr) {
+      console.error('PDF generation failed, HTML fallback:', pdfErr.message);
+      const htmlName = `CAS_Dagrapport_${date.replace(/-/g, '_')}.html`;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${htmlName}"`);
+      res.setHeader('X-Report-Format', 'html-fallback');
+      return res.send(Buffer.from(htmlContent, 'utf8'));
     }
-    
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } catch (e) {
-      console.error('Error closing browser:', e);
-    }
-    
-    // Set response headers for PDF download
+
     const filename = `CAS_Dagrapport_${date.replace(/-/g, '_')}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', pdfBuffer.length);
-    
     res.send(pdfBuffer);
 
   } catch (err) {

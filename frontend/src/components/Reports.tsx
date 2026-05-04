@@ -85,14 +85,18 @@ export const Reports: React.FC = () => {
       });
 
       if (response.ok) {
-        // Get the PDF blob
         const blob = await response.blob();
-        
-        // Create download link
+        const contentType = response.headers.get('Content-Type') || '';
+        const htmlFallback =
+          contentType.includes('text/html') ||
+          response.headers.get('X-Report-Format') === 'html-fallback';
+        const base = `CAS_Dagrapport_${reportData.selectedDate.replace(/-/g, '_')}`;
+        const filename = htmlFallback ? `${base}.html` : `${base}.pdf`;
+
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `CAS_Dagrapport_${reportData.selectedDate.replace(/-/g, '_')}.pdf`;
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         
