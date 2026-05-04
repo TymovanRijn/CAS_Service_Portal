@@ -153,7 +153,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           className="pointer-events-auto mx-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
           aria-label="Hoofdnavigatie"
         >
-          <div className="overflow-hidden rounded-[1.625rem] border border-white/90 bg-white/92 shadow-[0_12px_40px_-4px_rgba(15,23,42,0.14)] ring-1 ring-slate-900/[0.06] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/88">
+          <div className="overflow-hidden rounded-[1.625rem] border border-white/95 bg-white/93 shadow-dock ring-1 ring-slate-900/[0.055] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/90">
             {/* Gecentreerde tabstrip; bij veel items horizontaal scrollen */}
             <div className="-mx-0 flex justify-center overflow-x-auto overscroll-x-contain px-1 py-2 [-webkit-overflow-scrolling:touch]">
               <div className="scrollbar-hide flex w-max max-w-[min(100%,100vw-3rem)] snap-x snap-mandatory flex-nowrap items-stretch gap-0.5">
@@ -165,10 +165,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                     type="button"
                     onClick={() => handlePageChange(item.id)}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`tap-scale flex min-h-[4rem] min-w-[4rem] shrink-0 snap-start snap-always touch-manipulation flex-col items-center justify-center gap-0.5 rounded-2xl px-2 transition-colors duration-200 motion-reduce:transition-none ${
+                    className={`tap-scale flex min-h-[4rem] min-w-[4rem] shrink-0 snap-start snap-always touch-manipulation flex-col items-center justify-center gap-0.5 rounded-2xl px-2 transition-all duration-200 motion-reduce:transition-none ${
                       isActive
-                        ? 'bg-slate-900 text-white shadow-inner'
-                        : 'text-slate-500 hover:bg-slate-100/90 active:bg-slate-100'
+                        ? 'bg-slate-900 text-white shadow-inner ring-2 ring-white/20 ring-offset-0'
+                        : 'text-slate-600 hover:bg-slate-100/95 active:bg-slate-100 active:text-slate-900'
                     }`}
                   >
                     <span
@@ -196,7 +196,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       </div>
 
       <div
-        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out shadow-sm ${
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 border-r border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-slate-50/90 shadow-[1px_0_0_rgba(15,23,42,0.04)] transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-16' : 'w-64'
         }`}
       >

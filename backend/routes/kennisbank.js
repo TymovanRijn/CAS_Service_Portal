@@ -2,6 +2,7 @@ const express = require('express');
 const { 
   getArticles,
   createArticle,
+  updateArticle,
   deleteArticle,
   serveArticleCover,
   askOracle
@@ -22,6 +23,9 @@ router.get('/articles/:id/cover', serveArticleCover);
 
 // Create new article (available to all authenticated users); optioneel bestand `cover`
 router.post('/articles', uploadKnowledgeCover, createArticle);
+
+// Eigen artikel of Admin: bijwerken (multipart, optioneel nieuwe cover)
+router.put('/articles/:id', uploadKnowledgeCover, updateArticle);
 
 // Eigen artikel of Admin: verwijderen
 router.delete('/articles/:id', deleteArticle);

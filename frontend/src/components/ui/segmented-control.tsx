@@ -27,7 +27,7 @@ export function SegmentedControl<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "flex rounded-lg border border-slate-200/90 bg-slate-100/90 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+        "flex rounded-xl border border-slate-200/80 bg-slate-100/95 p-1 shadow-inner shadow-slate-900/10",
         className
       )}
     >

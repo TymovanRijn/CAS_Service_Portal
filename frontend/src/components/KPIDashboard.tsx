@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { SegmentedControl } from './ui/segmented-control';
@@ -269,7 +270,7 @@ export const KPIDashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <div className="text-red-500 mb-2">⚠️</div>
+          <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-red-500" aria-hidden />
           <p className="text-gray-600">{error}</p>
           <Button onClick={fetchKPIData} variant="outline" className="mt-4">
             Opnieuw proberen
@@ -284,7 +285,7 @@ export const KPIDashboard: React.FC = () => {
       {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">📊 KPI Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">KPI-dashboard</h1>
             <p className="text-muted-foreground">
               Overzicht van incidenten en acties - {getPeriodLabel().toLowerCase()}
             </p>
@@ -301,8 +302,9 @@ export const KPIDashboard: React.FC = () => {
               ]}
               className="w-full [&>button]:flex-1 sm:w-auto sm:[&>button]:flex-none"
             />
-            <Button onClick={fetchKPIData} variant="outline" size="sm">
-              🔄 Vernieuwen
+            <Button onClick={fetchKPIData} variant="outline" size="sm" className="gap-2">
+              <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+              Vernieuwen
             </Button>
           </div>
         </div>
@@ -378,7 +380,7 @@ export const KPIDashboard: React.FC = () => {
       {metrics && metrics.totalActions > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>⚙️ Actie Status Overzicht</CardTitle>
+            <CardTitle>Actiestatus</CardTitle>
             <CardDescription>Status van alle acties in het systeem</CardDescription>
           </CardHeader>
           <CardContent>
@@ -412,7 +414,7 @@ export const KPIDashboard: React.FC = () => {
       {/* SAC KPI Section - Always show */}
       <Card>
         <CardHeader>
-          <CardTitle>👁️ SAC Kwaliteitsindicatoren</CardTitle>
+          <CardTitle>SAC-kwaliteitsindicatoren</CardTitle>
           <CardDescription>
             KPI's opgegeven door SAC's bij incident aanmaak - {getPeriodLabel().toLowerCase()}
             {metrics && (metrics.unregisteredIncidents + metrics.incidentsRequiringEscalation + metrics.sacResolvedIncidents + 
@@ -483,7 +485,7 @@ export const KPIDashboard: React.FC = () => {
       {metrics && (
         <Card>
           <CardHeader>
-            <CardTitle>📅 Periode Overzicht</CardTitle>
+            <CardTitle>Periode-overzicht</CardTitle>
             <CardDescription>Incidenten per tijdsperiode (onafhankelijk van filter)</CardDescription>
           </CardHeader>
           <CardContent>
@@ -509,7 +511,7 @@ export const KPIDashboard: React.FC = () => {
       {metrics && metrics.totalIncidents > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>🎯 Prioriteit Verdeling</CardTitle>
+            <CardTitle>Prioriteitverdeling</CardTitle>
             <CardDescription>Verdeling van incidenten per prioriteit - {getPeriodLabel().toLowerCase()}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -545,7 +547,7 @@ export const KPIDashboard: React.FC = () => {
         {/* Location Performance */}
         <Card>
           <CardHeader>
-            <CardTitle>📍 Locatie Overzicht</CardTitle>
+            <CardTitle>Locatie-overzicht</CardTitle>
             <CardDescription>Incidenten per locatie - {getPeriodLabel().toLowerCase()}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -579,7 +581,7 @@ export const KPIDashboard: React.FC = () => {
         {/* Category Analysis */}
         <Card>
           <CardHeader>
-            <CardTitle>📊 Categorie Analyse</CardTitle>
+            <CardTitle>Categorie-analyse</CardTitle>
             <CardDescription>Incidenten per categorie - {getPeriodLabel().toLowerCase()}</CardDescription>
           </CardHeader>
           <CardContent>

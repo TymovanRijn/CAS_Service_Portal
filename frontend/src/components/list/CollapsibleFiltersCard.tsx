@@ -36,7 +36,7 @@ export const CollapsibleFiltersCard: React.FC<Props> = ({
     'max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:shadow-none max-lg:ring-0';
 
   return (
-    <Card className={`border-slate-200/90 shadow-sm lg:shadow-none ${cardMobile || ''}`}>
+    <Card className={`border-slate-200/85 shadow-card ring-slate-950/[0.03] lg:shadow-none ${cardMobile || ''}`}>
       <CardHeader className={`space-y-0 pb-2 ${minimalMobileChrome ? 'max-lg:p-0 max-lg:pb-0' : ''}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className={`min-w-0 ${minimalMobileChrome ? 'hidden lg:block' : ''}`}>

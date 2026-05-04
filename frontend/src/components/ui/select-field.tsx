@@ -12,7 +12,7 @@ const SelectField = React.forwardRef<
       <select
         ref={ref}
         className={cn(
-          "w-full cursor-pointer appearance-none rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm text-foreground shadow-sm transition-colors",
+          "w-full cursor-pointer appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm text-foreground shadow-sm transition-[box-shadow,color] duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className

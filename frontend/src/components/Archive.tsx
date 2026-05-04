@@ -258,8 +258,9 @@ export const Archive: React.FC = () => {
           <p className="mt-1 text-base text-slate-600">Overzicht, filters en oppakken</p>
         </div>
         <Button
+          variant="primary"
           onClick={() => setIsCreateIncidentModalOpen(true)}
-          className="h-11 w-full shrink-0 touch-manipulation shadow-sm lg:h-10 lg:w-auto"
+          className="h-11 w-full shrink-0 touch-manipulation lg:h-10 lg:w-auto"
         >
           <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -375,13 +376,15 @@ export const Archive: React.FC = () => {
       </CollapsibleFiltersCard>
 
       {/* Resultaten */}
-      <Card className="border-slate-200/90 shadow-sm">
+      <Card className="border-slate-200/90 shadow-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base font-semibold sm:text-lg">Resultaten</CardTitle>
               <CardDescription>
-                {pagination.total} incidenten gevonden
+                {pagination.total === 1
+                  ? '1 incident gevonden'
+                  : `${pagination.total} incidenten gevonden`}
                 {pagination.total > 0 && (
                   <> • Pagina {pagination.page} van {pagination.totalPages}</>
                 )}
@@ -453,13 +456,15 @@ export const Archive: React.FC = () => {
               {incidents.map((incident) => (
                 <div
                   key={incident.id}
-                  className="cursor-pointer rounded-xl border border-slate-200/90 bg-white p-4 transition-colors hover:bg-slate-50/95"
+                  className="cursor-pointer rounded-xl border border-slate-200/80 bg-white p-4 shadow-card ring-1 ring-slate-900/[0.04] transition-[box-shadow,background-color] hover:bg-slate-50/95 hover:shadow-card-hover"
                   onClick={() => handleIncidentClick(incident)}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm mb-1">#{incident.id} - {incident.title}</h4>
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-2">{incident.description}</p>
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="min-w-0 flex-1 pr-3">
+                      <h4 className="mb-1 text-sm font-semibold tracking-tight text-slate-900">
+                        #{incident.id} — {incident.title}
+                      </h4>
+                      <p className="mb-2 line-clamp-2 text-sm text-slate-600">{incident.description}</p>
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(incident.priority)}`}>
@@ -471,7 +476,7 @@ export const Archive: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-600">
                     <div className="flex items-center space-x-4">
                       {incident.location_name && (
                         <span className="flex items-center">
@@ -530,7 +535,7 @@ export const Archive: React.FC = () => {
               return (
                 <Button
                   key={pageNum}
-                  variant={pageNum === pagination.page ? "default" : "outline"}
+                  variant={pageNum === pagination.page ? "primary" : "outline"}
                   onClick={() => handlePageChange(pageNum)}
                   className="w-10"
                 >

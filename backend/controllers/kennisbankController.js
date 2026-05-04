@@ -428,6 +428,86 @@ INSTRUCTIES:
   }
 };
 
+const updateArticle = async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || Number.isNaN(id)) {
+    return res.status(400).json({ success: false, message: 'Ongeldig artikel' });
+  }
+
+  const title = (req.body.title && String(req.body.title).trim()) || '';
+  const content = (req.body.content && String(req.body.content).trim()) || '';
+  const role = (req.body.role && String(req.body.role).trim()) || 'Algemeen';
+
+  if (!title || !content) {
+    return res.status(400).json({
+      success: false,
+      message: 'Titel en inhoud zijn verplicht',
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    const userNumeric = Number(req.user.userId);
+
+    const articleRes = await client.query(
+      `SELECT author_id, image_filename FROM KnowledgeBaseArticles WHERE id = $1`,
+      [id]
+    );
+    if (!articleRes.rows.length) {
+      return res.status(404).json({ success: false, message: 'Artikel niet gevonden' });
+    }
+
+    const { author_id, image_filename: oldFilename } = articleRes.rows[0];
+    const authorNumeric = Number(author_id);
+    if (author_id == null || authorNumeric !== userNumeric) {
+      return res.status(403).json({
+        success: false,
+        message: 'Alleen de auteur van dit artikel kan het bewerken',
+      });
+    }
+
+    let nextFilename = oldFilename || null;
+
+    if (req.file && req.file.filename) {
+      if (oldFilename) {
+        const basename = path.basename(String(oldFilename));
+        const fp = path.join(kennisbankDir, basename);
+        const resolvedBase = path.resolve(kennisbankDir);
+        const resolvedFile = path.resolve(fp);
+        if (resolvedFile.startsWith(resolvedBase + path.sep) && fs.existsSync(resolvedFile)) {
+          try {
+            fs.unlinkSync(resolvedFile);
+          } catch (unlinkErr) {
+            console.error('updateArticle cover replace unlink:', unlinkErr.code || unlinkErr.message);
+          }
+        }
+      }
+      nextFilename = req.file.filename;
+    }
+
+    const updateRes = await client.query(
+      `
+      UPDATE KnowledgeBaseArticles
+      SET title = $1, content = $2, role = $3, image_filename = $4, updated_at = NOW()
+      WHERE id = $5
+      RETURNING id, title, content, role, author_id, author_name, image_filename, created_at, updated_at
+      `,
+      [title, content, role || 'Algemeen', nextFilename, id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Artikel bijgewerkt',
+      data: { article: updateRes.rows[0] },
+    });
+  } catch (err) {
+    console.error('updateArticle:', err);
+    res.status(500).json({ success: false, message: 'Bijwerken mislukt' });
+  } finally {
+    client.release();
+  }
+};
+
 const deleteArticle = async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || Number.isNaN(id)) {
@@ -492,6 +572,7 @@ const deleteArticle = async (req, res) => {
 module.exports = {
   getArticles,
   createArticle,
+  updateArticle,
   deleteArticle,
   serveArticleCover,
   askOracle

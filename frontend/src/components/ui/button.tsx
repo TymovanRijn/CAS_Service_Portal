@@ -10,8 +10,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         /** Primaire CTA — zelfde als `default`; expliciet te gebruiken in views. */
-        primary: "bg-primary text-primary-foreground hover:bg-primary/90",
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        primary:
+          "bg-primary text-primary-foreground shadow-sm shadow-slate-900/18 hover:bg-primary/92 hover:shadow-md active:translate-y-[0.5px] active:shadow-sm",
+        default:
+          "bg-primary text-primary-foreground shadow-sm shadow-slate-900/18 hover:bg-primary/92 hover:shadow-md active:translate-y-[0.5px] active:shadow-sm",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:

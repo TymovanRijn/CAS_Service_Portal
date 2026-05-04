@@ -12,6 +12,23 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: [
+          '"Plus Jakarta Sans"',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          'sans-serif',
+        ],
+      },
+      boxShadow: {
+        card: '0 1px 3px 0 rgb(15 23 42 / 0.05), 0 1px 2px -1px rgb(15 23 42 / 0.04)',
+        'card-hover': '0 8px 30px -8px rgb(15 23 42 / 0.1), 0 4px 12px -4px rgb(15 23 42 / 0.06)',
+        dock: '0 14px 44px -10px rgb(15 23 42 / 0.16), 0 6px 16px -6px rgb(15 23 42 / 0.08)',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

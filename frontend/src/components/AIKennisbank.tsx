@@ -120,7 +120,17 @@ interface Article {
   author_id: number | null;
   author_name: string;
   created_at: string;
+  updated_at?: string;
   image_filename?: string | null;
+}
+
+function canEditKnowledgeArticle(
+  u: { id: string | number; role_name?: string } | null | undefined,
+  article: Article
+): boolean {
+  if (!u) return false;
+  if (article.author_id == null) return false;
+  return Number(u.id) === Number(article.author_id);
 }
 
 interface RelevantArticle {
@@ -141,6 +151,8 @@ export const AIKennisbank: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'oracle' | 'articles'>('oracle');
   const [articles, setArticles] = useState<Article[]>([]);
   const [isAddingArticle, setIsAddingArticle] = useState(false);
+  const [editingArticleId, setEditingArticleId] = useState<number | null>(null);
+  const [kbSaveLoading, setKbSaveLoading] = useState(false);
   const [newArticle, setNewArticle] = useState({ title: '', content: '', role: 'Algemeen' });
   const [oracleQuery, setOracleQuery] = useState('');
   const [isOracleLoading, setIsOracleLoading] = useState(false);
@@ -167,6 +179,7 @@ export const AIKennisbank: React.FC = () => {
   }, [coverPreviewUrl]);
 
   const resetAddArticleForm = () => {
+    setEditingArticleId(null);
     setNewArticle({ title: '', content: '', role: 'Algemeen' });
     setCoverFile(null);
     setError('');
@@ -180,6 +193,21 @@ export const AIKennisbank: React.FC = () => {
   const closeAddArticle = () => {
     resetAddArticleForm();
     setIsAddingArticle(false);
+    setKbSaveLoading(false);
+  };
+
+  const openEditArticle = (article: Article) => {
+    setError('');
+    setEditingArticleId(article.id);
+    setNewArticle({
+      title: article.title,
+      content: article.content,
+      role: article.role,
+    });
+    setCoverFile(null);
+    setIsArticleModalOpen(false);
+    setSelectedArticle(null);
+    setIsAddingArticle(true);
   };
 
   useEffect(() => {
@@ -211,7 +239,7 @@ export const AIKennisbank: React.FC = () => {
     }
   };
 
-  const handleAddArticle = async (e: React.FormEvent) => {
+  const handleKbFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newArticle.title.trim() || !newArticle.content.trim()) {
       setError('Titel en inhoud zijn verplicht');
@@ -220,6 +248,7 @@ export const AIKennisbank: React.FC = () => {
 
     try {
       setError('');
+      setKbSaveLoading(true);
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('title', newArticle.title.trim());
@@ -229,31 +258,39 @@ export const AIKennisbank: React.FC = () => {
         formData.append('cover', coverFile);
       }
 
-      const response = await fetch(`${BACKEND_URL}/api/kennisbank/articles`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const isEdit = editingArticleId != null;
+      const url = isEdit
+        ? `${BACKEND_URL}/api/kennisbank/articles/${editingArticleId}`
+        : `${BACKEND_URL}/api/kennisbank/articles`;
+      const response = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: 'include',
-        body: formData
+        body: formData,
       });
 
       if (response.ok) {
         await fetchArticles();
         closeAddArticle();
       } else {
-        let message = 'Fout bij toevoegen van artikel';
+        let message = isEdit ? 'Fout bij bijwerken van artikel' : 'Fout bij toevoegen van artikel';
         try {
           const errorData = await response.json();
           message = errorData.message || message;
         } catch {
-          // ignore JSON parse failure
+          /* ignore */
         }
         setError(message);
       }
     } catch (err) {
-      console.error('Error adding article:', err);
-      setError('Netwerkfout bij toevoegen van artikel');
+      console.error('Knowledge article save:', err);
+      setError(
+        editingArticleId != null
+          ? 'Netwerkfout bij bijwerken van artikel'
+          : 'Netwerkfout bij toevoegen van artikel'
+      );
+    } finally {
+      setKbSaveLoading(false);
     }
   };
 
@@ -645,52 +682,96 @@ export const AIKennisbank: React.FC = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
-              {filteredArticles.map((article) => (
-                <Card 
-                  key={article.id}
-                  className="cursor-pointer overflow-hidden border-border/80 bg-card shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                  onClick={() => {
-                    setSelectedArticle(article);
-                    setIsArticleModalOpen(true);
-                  }}
-                >
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold uppercase rounded-md">
-                        {article.role}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs font-medium text-slate-600">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {formatDate(article.created_at)}
-                      </span>
-                      {article.image_filename ? (
-                        <span className="ml-auto text-muted-foreground/[0.22]" title="Artikel heeft een illustratie">
-                          <ArticleIllustrationHintIcon className="h-[18px] w-[18px]" />
-                        </span>
-                      ) : null}
-                    </div>
-                    <CardTitle className="text-lg leading-tight transition-colors">{article.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 line-clamp-3 mb-4 leading-relaxed">
-                      {article.content}
-                    </p>
-                    <div className="flex items-center justify-between border-t border-gray-50 pt-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
+              {filteredArticles.map((article) => {
+                const editable = canEditKnowledgeArticle(user, article);
+                return (
+                  <Card
+                    key={article.id}
+                    className="overflow-hidden border-border/80 bg-card shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <button
+                      type="button"
+                      className="w-full cursor-pointer text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onClick={() => {
+                        setSelectedArticle(article);
+                        setIsArticleModalOpen(true);
+                      }}
+                    >
+                      <CardHeader>
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase text-primary">
+                            {article.role}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs font-medium text-slate-600">
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            {formatDate(article.created_at)}
+                          </span>
+                          {article.image_filename ? (
+                            <span className="ml-auto text-muted-foreground/[0.22]" title="Artikel heeft een illustratie">
+                              <ArticleIllustrationHintIcon className="h-[18px] w-[18px]" />
+                            </span>
+                          ) : null}
                         </div>
-                        <span className="text-xs font-bold text-gray-500">Gedeeld door {article.author_name}</span>
+                        <CardTitle className="text-lg leading-tight transition-colors">{article.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pb-4 pt-0">
+                        <p className="line-clamp-3 text-sm leading-relaxed text-gray-600">{article.content}</p>
+                      </CardContent>
+                    </button>
+                    <CardContent className="border-t border-gray-50 pt-0">
+                      <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                            <svg className="h-3 w-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
+                          </div>
+                          <span className="truncate text-xs font-semibold text-slate-600">
+                            Gedeeld door {article.author_name}
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                          {editable ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="min-h-10 bg-white touch-manipulation"
+                              onClick={() => openEditArticle(article)}
+                            >
+                              Bewerken
+                            </Button>
+                          ) : null}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-10 text-slate-700 touch-manipulation"
+                            onClick={() => {
+                              setSelectedArticle(article);
+                              setIsArticleModalOpen(true);
+                            }}
+                          >
+                            Openen
+                          </Button>
+                        </div>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground">Openen</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -712,12 +793,18 @@ export const AIKennisbank: React.FC = () => {
             >
             <CardHeader className="shrink-0 flex flex-row items-center justify-between border-b border-border bg-muted/40">
               <div className="flex items-center gap-3">
-                <div className="bg-primary p-2 rounded-lg">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+                <div className="rounded-lg bg-primary p-2">
+                  {editingArticleId != null ? (
+                    <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  )}
                 </div>
-                <CardTitle>Nieuwe Kennis Toevoegen</CardTitle>
+                <CardTitle>{editingArticleId != null ? 'Kennis bewerken' : 'Nieuwe kennis toevoegen'}</CardTitle>
               </div>
               <button 
                 type="button"
@@ -730,7 +817,7 @@ export const AIKennisbank: React.FC = () => {
               </button>
             </CardHeader>
             
-            <form onSubmit={handleAddArticle} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <form onSubmit={handleKbFormSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <div className="space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
               {error ? (
                 <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
@@ -741,13 +828,14 @@ export const AIKennisbank: React.FC = () => {
                     Titel van Artikel
                   </label>
                   <input 
-                    autoFocus
+                    autoFocus={editingArticleId == null}
                     required
                     type="text" 
                     value={newArticle.title}
                     onChange={(e) => setNewArticle({...newArticle, title: e.target.value})}
                     placeholder="Bijv. Troubleshooting Glasvezel ONT"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                    disabled={kbSaveLoading}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                   />
                 </div>
                 <div>
@@ -756,6 +844,7 @@ export const AIKennisbank: React.FC = () => {
                   </label>
                   <SelectField
                     value={newArticle.role}
+                    disabled={kbSaveLoading}
                     onChange={(e) => setNewArticle({ ...newArticle, role: e.target.value })}
                   >
                     {roles.map((r) => (
@@ -774,11 +863,17 @@ export const AIKennisbank: React.FC = () => {
                 >
                   Illustratie (optioneel)
                 </label>
+                {editingArticleId != null ? (
+                  <p className="ml-1 mt-1 text-[11px] text-muted-foreground">
+                    Laat leeg om de huidige illustratie te behouden; kies een nieuw bestand om te vervangen.
+                  </p>
+                ) : null}
                 <input
                   id="kb-cover-image"
                   type="file"
+                  disabled={kbSaveLoading}
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-800 hover:file:bg-slate-50"
                   onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
                     setCoverFile(f);
@@ -804,7 +899,8 @@ export const AIKennisbank: React.FC = () => {
                   value={newArticle.content}
                   onChange={(e) => setNewArticle({...newArticle, content: e.target.value})}
                   placeholder="Leg hier in je eigen woorden uit wat je hebt geleerd of hoe een proces werkt..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+                  disabled={kbSaveLoading}
+                  className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                 />
               </div>
 
@@ -814,6 +910,7 @@ export const AIKennisbank: React.FC = () => {
                 <Button 
                   type="button"
                   variant="outline"
+                  disabled={kbSaveLoading}
                   onClick={closeAddArticle}
                   className="flex-1"
                 >
@@ -822,9 +919,16 @@ export const AIKennisbank: React.FC = () => {
                 <Button
                   type="submit"
                   variant="primary"
+                  disabled={kbSaveLoading}
                   className="flex-[2]"
                 >
-                  Kennis Publiceren
+                  {kbSaveLoading
+                    ? editingArticleId != null
+                      ? 'Opslaan…'
+                      : 'Publiceren…'
+                    : editingArticleId != null
+                      ? 'Wijzigingen opslaan'
+                      : 'Kennis publiceren'}
                 </Button>
               </div>
             </form>
@@ -866,6 +970,18 @@ export const AIKennisbank: React.FC = () => {
                 <CardTitle className="text-2xl">{selectedArticle.title}</CardTitle>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-start">
+                {user && selectedArticle && canEditKnowledgeArticle(user, selectedArticle) ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 min-h-9 touch-manipulation whitespace-nowrap"
+                    disabled={deleteKbLoading}
+                    onClick={() => openEditArticle(selectedArticle)}
+                  >
+                    Bewerken
+                  </Button>
+                ) : null}
                 {user &&
                 selectedArticle &&
                 (user.role_name === 'Admin' ||

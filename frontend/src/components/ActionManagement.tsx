@@ -7,6 +7,7 @@ import { CreateActionModal } from './CreateActionModal';
 import { ActionDetailModal } from './ActionDetailModal';
 import { useAuth } from '../contexts/AuthContext';
 import { CollapsibleFiltersCard } from './list/CollapsibleFiltersCard';
+import { SegmentedControl } from './ui/segmented-control';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -380,8 +381,9 @@ export const ActionManagement: React.FC = () => {
           <p className="mt-1 text-base text-slate-600">Overzicht, oppakken en voltooien</p>
         </div>
         <Button
+          variant="primary"
           onClick={() => setIsCreateModalOpen(true)}
-          className="h-11 w-full shrink-0 touch-manipulation shadow-sm lg:h-10 lg:w-auto"
+          className="h-11 w-full shrink-0 touch-manipulation lg:h-10 lg:w-auto"
         >
           <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -401,7 +403,9 @@ export const ActionManagement: React.FC = () => {
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Openstaand</p>
+                <p className="truncate text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                  Openstaand
+                </p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">{stats.pendingActions}</p>
               </div>
             </div>
@@ -417,7 +421,9 @@ export const ActionManagement: React.FC = () => {
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">In Behandeling</p>
+                <p className="truncate text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                  In behandeling
+                </p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-yellow-600">{stats.inProgressActions}</p>
               </div>
             </div>
@@ -433,7 +439,9 @@ export const ActionManagement: React.FC = () => {
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Vandaag Voltooid</p>
+                <p className="truncate text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                  Vandaag voltooid
+                </p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">{stats.completedToday}</p>
               </div>
             </div>
@@ -449,7 +457,9 @@ export const ActionManagement: React.FC = () => {
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Mijn Acties</p>
+                <p className="truncate text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                  Mijn acties
+                </p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-600">{stats.myActions}</p>
               </div>
             </div>
@@ -457,41 +467,17 @@ export const ActionManagement: React.FC = () => {
         </Card>
       </div>
 
-      {/* Mobile-optimized View Tabs */}
-      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-1 bg-gray-100 p-1 rounded-lg">
-        <button
-          onClick={() => setCurrentView('pending')}
-          className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md text-sm font-medium transition-colors touch-manipulation ${
-            currentView === 'pending'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <span className="block sm:hidden">Openstaand</span>
-          <span className="hidden sm:block">Openstaande Acties</span>
-        </button>
-        <button
-          onClick={() => setCurrentView('all')}
-          className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md text-sm font-medium transition-colors touch-manipulation ${
-            currentView === 'all'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <span className="block sm:hidden">Alle</span>
-          <span className="hidden sm:block">Alle Acties</span>
-        </button>
-        <button
-          onClick={() => setCurrentView('archive')}
-          className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md text-sm font-medium transition-colors touch-manipulation ${
-            currentView === 'archive'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Archief
-        </button>
-      </div>
+      <SegmentedControl
+        aria-label="Actieweergave"
+        value={currentView}
+        onChange={(v) => setCurrentView(v as 'pending' | 'all' | 'archive')}
+        options={[
+          { value: 'pending', label: 'Openstaand' },
+          { value: 'all', label: 'Alle acties' },
+          { value: 'archive', label: 'Archief' },
+        ]}
+        className="w-full [&>button]:min-h-11 [&>button]:flex-1"
+      />
 
       {/* Filters — alleen bij Alle / Archief; standaard dicht */}
       {currentView !== 'pending' && (
@@ -609,7 +595,7 @@ export const ActionManagement: React.FC = () => {
                 {currentView === 'archive' && 'Actie Archief'}
               </CardTitle>
               <CardDescription className="text-sm">
-                {actions.length} acties gevonden
+                {actions.length === 1 ? '1 actie gevonden' : `${actions.length} acties gevonden`}
                 {pagination.total > 0 && currentView !== 'pending' && (
                   <span className="hidden sm:inline"> • Pagina {pagination.page} van {pagination.totalPages}</span>
                 )}
