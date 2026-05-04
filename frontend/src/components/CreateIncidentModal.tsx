@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { SelectField } from './ui/select-field';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
@@ -398,33 +399,33 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                     <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
                       Prioriteit <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <SelectField
                       id="priority"
                       name="priority"
                       value={formData.priority}
                       onChange={handleInputChange}
                       required
                       disabled={isSubmitting}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
+                      className="text-base touch-manipulation sm:text-sm"
                     >
                       <option value="Low">Laag</option>
                       <option value="Medium">Gemiddeld</option>
                       <option value="High">Hoog</option>
-                    </select>
+                    </SelectField>
                   </div>
 
                   <div>
                     <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-2">
                       Categorie <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <SelectField
                       id="category_id"
                       name="category_id"
                       value={formData.category_id}
                       onChange={handleInputChange}
                       required
                       disabled={isSubmitting || isLoading}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
+                      className="text-base touch-manipulation sm:text-sm"
                     >
                       <option value="">Selecteer categorie</option>
                       {categories.map((category) => (
@@ -432,7 +433,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                           {category.name}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
                 </div>
 
@@ -441,14 +442,14 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                   <label htmlFor="location_id" className="block text-sm font-medium text-gray-700 mb-2">
                     Locatie <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SelectField
                     id="location_id"
                     name="location_id"
                     value={formData.location_id}
                     onChange={handleInputChange}
                     required
                     disabled={isSubmitting || isLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
+                    className="text-base touch-manipulation sm:text-sm"
                   >
                     <option value="">Selecteer locatie</option>
                     {locations.map((location) => (
@@ -456,7 +457,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                         {location.name}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </div>
 
                 {/* Description */}
@@ -507,7 +508,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                     
                                         {/* Ultra Simple Dropdown - Always Works */}
                     <div>
-                      <select
+                      <SelectField
                         name="sac_kpi_selection"
                         onChange={(e) => {
                           const value = e.target.value;
@@ -530,7 +531,6 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                           }
                         }}
                         disabled={isSubmitting}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                       >
                         <option value="">Geen bijzonderheden</option>
                         <option value="was_unregistered_incident">Niet geregistreerd incident</option>
@@ -538,7 +538,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                         <option value="requires_escalation">Escalatie/nabellen nodig</option>
                         <option value="service_party_arrived_late">Service party te laat</option>
                         <option value="incorrect_diagnosis">Verkeerde diagnose door service party</option>
-                      </select>
+                      </SelectField>
                       
                       {/* Show selected value */}
                       <div className="mt-2 text-xs text-gray-500">
@@ -676,6 +676,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
           </Button>
           <Button
             type="submit"
+            variant="primary"
             onClick={handleSubmit}
             disabled={isSubmitting || isLoading}
             className="w-full sm:w-auto order-1 sm:order-2 touch-manipulation"

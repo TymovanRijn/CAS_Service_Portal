@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { SelectField } from './ui/select-field';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { CreateActionModal } from './CreateActionModal';
 import { ActionDetailModal } from './ActionDetailModal';
@@ -520,48 +521,48 @@ export const ActionManagement: React.FC = () => {
               {currentView !== 'archive' && (
                 <div>
                   <label className="mb-2 block text-sm font-medium">Status</label>
-                  <select
+                  <SelectField
                     value={filters.status}
                     onChange={(e) => handleFilterChange('status', e.target.value)}
-                    className="flex h-10 w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                    className="text-base touch-manipulation sm:text-sm"
                   >
                     <option value="">Alle statussen</option>
                     <option value="Pending">Openstaand</option>
                     <option value="In Progress">In Behandeling</option>
                     <option value="Completed">Voltooid</option>
-                  </select>
+                  </SelectField>
                 </div>
               )}
 
               {/* Priority */}
               <div>
                 <label className="mb-2 block text-sm font-medium">Prioriteit</label>
-                <select
+                <SelectField
                   value={filters.priority}
                   onChange={(e) => handleFilterChange('priority', e.target.value)}
-                  className="flex h-10 w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                  className="text-base touch-manipulation sm:text-sm"
                 >
                   <option value="">Alle prioriteiten</option>
                   <option value="Low">Laag</option>
                   <option value="Medium">Gemiddeld</option>
                   <option value="High">Hoog</option>
-                </select>
+                </SelectField>
               </div>
 
               {/* Assigned To */}
               <div>
                 <label className="mb-2 block text-sm font-medium">Toegewezen aan</label>
-                <select
+                <SelectField
                   value={filters.assigned_to}
                   onChange={(e) => handleFilterChange('assigned_to', e.target.value)}
-                  className="flex h-10 w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                  className="text-base touch-manipulation sm:text-sm"
                 >
                   <option value="">Iedereen</option>
                   <option value="unassigned">Niet toegewezen</option>
                   {availableUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.username}</option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-2 xl:col-span-2">

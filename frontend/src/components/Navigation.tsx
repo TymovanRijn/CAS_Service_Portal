@@ -148,7 +148,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       </header>
 
       {/* Mobiel: drijvende dock (geen rand-tot-rand „website“-balk) */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 lg:hidden">
+      <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 w-full lg:hidden">
         <nav
           className="pointer-events-auto mx-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
           aria-label="Hoofdnavigatie"

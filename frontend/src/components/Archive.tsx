@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { SelectField } from './ui/select-field';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { IncidentDetailModal } from './IncidentDetailModal';
 import { CreateIncidentModal } from './CreateIncidentModal';
@@ -288,61 +289,57 @@ export const Archive: React.FC = () => {
             {/* Status */}
             <div>
               <label className="text-sm font-medium mb-1 block">Status</label>
-              <select
+              <SelectField
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Alle statussen</option>
                 <option value="Open">Open</option>
                 <option value="In Progress">In Progress</option>
                 <option value="Closed">Gesloten</option>
-              </select>
+              </SelectField>
             </div>
 
             {/* Priority */}
             <div>
               <label className="text-sm font-medium mb-1 block">Prioriteit</label>
-              <select
+              <SelectField
                 value={filters.priority}
                 onChange={(e) => handleFilterChange('priority', e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Alle prioriteiten</option>
                 <option value="Low">Laag</option>
                 <option value="Medium">Gemiddeld</option>
                 <option value="High">Hoog</option>
-              </select>
+              </SelectField>
             </div>
 
             {/* Category */}
             <div>
               <label className="text-sm font-medium mb-1 block">Categorie</label>
-              <select
+              <SelectField
                 value={filters.category}
                 onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Alle categorieën</option>
                 {categories.map(category => (
                   <option key={category.id} value={category.name}>{category.name}</option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             {/* Location */}
             <div>
               <label className="text-sm font-medium mb-1 block">Locatie</label>
-              <select
+              <SelectField
                 value={filters.location}
                 onChange={(e) => handleFilterChange('location', e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Alle locaties</option>
                 {locations.map(location => (
                   <option key={location.id} value={location.name}>{location.name}</option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             {/* Start Date */}

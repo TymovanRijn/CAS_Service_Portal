@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { SelectField } from './ui/select-field';
+import { SegmentedControl } from './ui/segmented-control';
 import { useAuth } from '../contexts/AuthContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
@@ -428,6 +430,7 @@ export const AIKennisbank: React.FC = () => {
         </div>
         <Button
           type="button"
+          variant="primary"
           onClick={openAddArticle}
           className="h-11 w-full shrink-0 shadow-sm transition-colors duration-200 lg:h-10 lg:w-auto"
         >
@@ -453,36 +456,16 @@ export const AIKennisbank: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-border/80 bg-muted/50 p-1 shadow-sm">
-          <button
-            type="button"
-            onClick={() => setActiveTab('oracle')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 touch-manipulation sm:py-3 ${
-              activeTab === 'oracle'
-                ? 'bg-background text-foreground shadow-sm ring-1 ring-black/[0.06]'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <svg className="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            <span className="truncate">Het Orakel</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('articles')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 touch-manipulation sm:py-3 ${
-              activeTab === 'articles'
-                ? 'bg-background text-foreground shadow-sm ring-1 ring-black/[0.06]'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <svg className="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="truncate">Bibliotheek ({articles.length})</span>
-          </button>
-      </div>
+      <SegmentedControl
+        aria-label="Weergave"
+        value={activeTab}
+        onChange={(tab) => setActiveTab(tab as typeof activeTab)}
+        options={[
+          { value: 'oracle', label: 'Het Orakel' },
+          { value: 'articles', label: `Bibliotheek (${articles.length})` },
+        ]}
+        className="w-full [&>button]:min-w-0 [&>button]:flex-1 sm:w-auto sm:[&>button]:flex-none"
+      />
 
       {/* Main Content */}
       {activeTab === 'oracle' ? (
@@ -582,7 +565,7 @@ export const AIKennisbank: React.FC = () => {
             </div>
 
             {/* Input Bar */}
-            <div className="relative">
+            <div className="flex items-center gap-2 rounded-full border border-gray-300 bg-white py-1.5 pl-4 pr-1.5 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
               <input
                 type="text"
                 value={oracleQuery}
@@ -594,19 +577,20 @@ export const AIKennisbank: React.FC = () => {
                   }
                 }}
                 placeholder="Stel een vraag…"
-                className="w-full rounded-full border border-input bg-background py-3 pl-5 pr-14 text-sm text-foreground shadow-sm outline-none transition-shadow placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-10 min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
               />
               <button
                 type="button"
                 onClick={askOracle}
                 disabled={!oracleQuery.trim() || isOracleLoading}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 transition-colors ${
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
                   oracleQuery.trim()
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'cursor-not-allowed bg-muted text-muted-foreground'
                 }`}
+                aria-label="Verstuur vraag"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               </button>
@@ -650,9 +634,9 @@ export const AIKennisbank: React.FC = () => {
                     : 'Wees de eerste en voeg een nieuw artikel toe!'}
                 </p>
                 {!searchQuery && (
-                  <Button 
+                  <Button
                     onClick={openAddArticle}
-                    className="bg-primary hover:bg-primary/90"
+                    variant="primary"
                   >
                     Start de kennisbank
                   </Button>
@@ -675,7 +659,7 @@ export const AIKennisbank: React.FC = () => {
                       <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold uppercase rounded-md">
                         {article.role}
                       </span>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-xs font-medium text-slate-600">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -770,13 +754,16 @@ export const AIKennisbank: React.FC = () => {
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
                     Relevant voor Rol
                   </label>
-                  <select 
+                  <SelectField
                     value={newArticle.role}
-                    onChange={(e) => setNewArticle({...newArticle, role: e.target.value})}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+                    onChange={(e) => setNewArticle({ ...newArticle, role: e.target.value })}
                   >
-                    {roles.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
+                    {roles.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </SelectField>
                 </div>
               </div>
 
@@ -832,9 +819,10 @@ export const AIKennisbank: React.FC = () => {
                 >
                   Annuleren
                 </Button>
-                <Button 
+                <Button
                   type="submit"
-                  className="flex-[2] bg-primary hover:bg-primary/90"
+                  variant="primary"
+                  className="flex-[2]"
                 >
                   Kennis Publiceren
                 </Button>
@@ -868,7 +856,7 @@ export const AIKennisbank: React.FC = () => {
                   <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold uppercase rounded-md">
                     {selectedArticle.role}
                   </span>
-                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                  <span className="flex items-center gap-1 text-xs font-medium text-slate-600">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>

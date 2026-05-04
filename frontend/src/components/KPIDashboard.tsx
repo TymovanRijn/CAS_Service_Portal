@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { SegmentedControl } from './ui/segmented-control';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -270,7 +271,7 @@ export const KPIDashboard: React.FC = () => {
         <div className="text-center">
           <div className="text-red-500 mb-2">⚠️</div>
           <p className="text-gray-600">{error}</p>
-          <Button onClick={fetchKPIData} className="mt-4">
+          <Button onClick={fetchKPIData} variant="outline" className="mt-4">
             Opnieuw proberen
           </Button>
         </div>
@@ -281,32 +282,30 @@ export const KPIDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">📊 KPI Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overzicht van incidenten en acties - {getPeriodLabel().toLowerCase()}
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex gap-2">
-            {['week', 'month', 'quarter'].map((period) => (
-              <Button
-                key={period}
-                variant={selectedPeriod === period ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedPeriod(period as any)}
-              >
-                {period === 'week' ? 'Week' :
-                 period === 'month' ? 'Maand' : 'Kwartaal'}
-              </Button>
-            ))}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">📊 KPI Dashboard</h1>
+            <p className="text-muted-foreground">
+              Overzicht van incidenten en acties - {getPeriodLabel().toLowerCase()}
+            </p>
           </div>
-          <Button onClick={fetchKPIData} variant="outline" size="sm">
-            🔄 Vernieuwen
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            <SegmentedControl
+              aria-label="Periode"
+              value={selectedPeriod}
+              onChange={(period) => setSelectedPeriod(period)}
+              options={[
+                { value: 'week', label: 'Week' },
+                { value: 'month', label: 'Maand' },
+                { value: 'quarter', label: 'Kwartaal' },
+              ]}
+              className="w-full [&>button]:flex-1 sm:w-auto sm:[&>button]:flex-none"
+            />
+            <Button onClick={fetchKPIData} variant="outline" size="sm">
+              🔄 Vernieuwen
+            </Button>
+          </div>
         </div>
-      </div>
 
       {/* Last Updated */}
       <div className="text-sm text-muted-foreground">
@@ -318,69 +317,58 @@ export const KPIDashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Incidenten {getPeriodLabel()}</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatNumber(metrics.totalIncidents)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Deze maand: {formatNumber(metrics.thisMonthIncidents)}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  📋
-                </div>
-              </div>
+              <p className="text-[0.875rem] font-semibold uppercase tracking-wide text-slate-500">
+                Incidenten {getPeriodLabel()}
+              </p>
+              <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-blue-600 md:text-4xl">
+                {formatNumber(metrics.totalIncidents)}
+              </p>
+              <p className="mt-2 text-xs font-medium text-slate-600">
+                Deze maand: {formatNumber(metrics.thisMonthIncidents)}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Openstaand</p>
-                  <p className="text-2xl font-bold text-red-600">{formatNumber(metrics.openIncidents)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    In behandeling: {formatNumber(metrics.inProgressIncidents)}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  🚨
-                </div>
-              </div>
+              <p className="text-[0.875rem] font-semibold uppercase tracking-wide text-slate-500">Openstaand</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-red-600 md:text-4xl">
+                {formatNumber(metrics.openIncidents)}
+              </p>
+              <p className="mt-2 text-xs font-medium text-slate-600">
+                In behandeling: {formatNumber(metrics.inProgressIncidents)}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Hoge Prioriteit</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatNumber(metrics.highPriorityIncidents)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {formatPercentage(metrics.totalIncidents, metrics.highPriorityIncidents)} van {getPeriodLabel().toLowerCase()}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  ⚡
-                </div>
-              </div>
+              <p className="text-[0.875rem] font-semibold uppercase tracking-wide text-slate-500">
+                Hoge prioriteit
+              </p>
+              <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-orange-600 md:text-4xl">
+                {formatNumber(metrics.highPriorityIncidents)}
+              </p>
+              <p className="mt-2 text-xs font-medium text-slate-600">
+                {formatPercentage(metrics.totalIncidents, metrics.highPriorityIncidents)} van{' '}
+                {getPeriodLabel().toLowerCase()}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Acties Totaal</p>
-                  <p className="text-2xl font-bold text-green-600">{formatNumber(metrics.totalActions)}</p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {metrics.totalActions === 0 ? 'Nog geen acties' : `${formatNumber(metrics.pendingActions)} openstaand`}
-                  </div>
-                </div>
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  ⚙️
-                </div>
-              </div>
+              <p className="text-[0.875rem] font-semibold uppercase tracking-wide text-slate-500">
+                Acties totaal
+              </p>
+              <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-green-600 md:text-4xl">
+                {formatNumber(metrics.totalActions)}
+              </p>
+              <p className="mt-2 text-xs font-medium text-slate-600">
+                {metrics.totalActions === 0
+                  ? 'Nog geen acties'
+                  : `${formatNumber(metrics.pendingActions)} openstaand`}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -566,7 +554,7 @@ export const KPIDashboard: React.FC = () => {
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{location.location}</div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm font-medium text-slate-600">
                       {formatNumber(location.incidents)} totaal
                     </div>
                   </div>
@@ -574,7 +562,7 @@ export const KPIDashboard: React.FC = () => {
                     <div className="text-sm font-medium text-red-600">
                       {formatNumber(location.openIncidents)} open
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs font-medium text-slate-600">
                       {formatPercentage(location.incidents, location.openIncidents)} open
                     </div>
                   </div>
@@ -600,7 +588,7 @@ export const KPIDashboard: React.FC = () => {
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{category.category}</div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm font-medium text-slate-600">
                       {formatNumber(category.incidents)} totaal
                     </div>
                   </div>

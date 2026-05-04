@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { SelectField } from './ui/select-field';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -416,10 +417,9 @@ export const AdminSchedule: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               SAC Gebruiker
             </label>
-            <select
+            <SelectField
               value={filters.userId}
               onChange={(e) => setFilters({ ...filters, userId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             >
               <option value="">Alle gebruikers</option>
               {sacUsers.map(user => (
@@ -427,22 +427,21 @@ export const AdminSchedule: React.FC = () => {
                   {user.username} ({user.email})
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
-            <select
+            <SelectField
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             >
               <option value="">Alle statussen</option>
               <option value="pending">In behandeling</option>
               <option value="approved">Goedgekeurd</option>
               <option value="rejected">Afgewezen</option>
-            </select>
+            </SelectField>
           </div>
           <div className="flex items-end">
             <button

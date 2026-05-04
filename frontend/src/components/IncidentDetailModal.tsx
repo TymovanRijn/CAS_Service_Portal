@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { SelectField } from './ui/select-field';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
@@ -579,19 +580,19 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                       Categorie
                     </label>
                     {isEditing ? (
-                      <select
+                      <SelectField
                         name="category_id"
                         value={editData.category_id}
                         onChange={handleInputChange}
                         disabled={isSaving}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
+                        className="text-base touch-manipulation sm:text-sm"
                       >
                         {categories.map((category) => (
                           <option key={category.id} value={category.id}>
                             {category.name}
                           </option>
                         ))}
-                      </select>
+                      </SelectField>
                     ) : (
                       <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded-lg">
                         {incident.category_name}
@@ -604,19 +605,19 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                       Locatie
                     </label>
                     {isEditing ? (
-                      <select
+                      <SelectField
                         name="location_id"
                         value={editData.location_id}
                         onChange={handleInputChange}
                         disabled={isSaving}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
+                        className="text-base touch-manipulation sm:text-sm"
                       >
                         {locations.map((location) => (
                           <option key={location.id} value={location.id}>
                             {location.name}
                           </option>
                         ))}
-                      </select>
+                      </SelectField>
                     ) : (
                       <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded-lg">
                         {incident.location_name}
@@ -632,35 +633,35 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Prioriteit
                       </label>
-                      <select
+                      <SelectField
                         name="priority"
                         value={editData.priority}
                         onChange={handleInputChange}
                         disabled={isSaving}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
+                        className="text-base touch-manipulation sm:text-sm"
                       >
                         <option value="Low">Laag</option>
                         <option value="Medium">Gemiddeld</option>
                         <option value="High">Hoog</option>
-                      </select>
+                      </SelectField>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Status
                       </label>
-                      <select
+                      <SelectField
                         name="status"
                         value={editData.status}
                         onChange={handleInputChange}
                         disabled={isSaving}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm touch-manipulation"
+                        className="text-base touch-manipulation sm:text-sm"
                       >
                         <option value="Open">Open</option>
                         <option value="In Progress">In Behandeling</option>
                         <option value="Resolved">Opgelost</option>
                         <option value="Closed">Gesloten</option>
-                      </select>
+                      </SelectField>
                     </div>
                   </div>
                 )}

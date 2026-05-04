@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { SelectField } from './ui/select-field';
 import { useAuth } from '../contexts/AuthContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
@@ -863,11 +864,10 @@ const UserModal: React.FC<UserModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Rol *
             </label>
-            <select
+            <SelectField
               value={formData.role_id}
               onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Selecteer een rol</option>
               {roles.map((role) => (
@@ -875,7 +875,7 @@ const UserModal: React.FC<UserModalProps> = ({
                   {role.name} - {role.description}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
 
           {user && (

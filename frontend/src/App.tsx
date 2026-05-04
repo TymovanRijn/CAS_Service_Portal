@@ -49,7 +49,8 @@ const AppContent: React.FC = () => {
         isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}>
         {/* Mobiel: header (~3rem) + safe area + ruimte voor drijvende dock; desktop ongewijzigd */}
-        <main className="min-h-0 max-w-full px-3 pt-[calc(env(safe-area-inset-top,0px)+3rem+0.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+7.25rem)] sm:px-4 md:px-6 lg:px-8 lg:pt-6 lg:pb-8">
+        {/* Mobiel: reservering voor onderste dock (~80px) + safe area; desktop doorlopende sidebar */}
+        <main className="min-h-0 max-w-full px-3 pt-[calc(env(safe-area-inset-top,0px)+3rem+0.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:px-4 md:px-6 lg:px-8 lg:pt-6 lg:pb-8">
           <div key={currentPage} className="page-fade">
             {renderPage(currentPage, user)}
           </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { SelectField } from './ui/select-field';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
@@ -225,14 +225,13 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
                   <label htmlFor="incident_id" className="text-sm font-medium">
                     Incident <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SelectField
                     id="incident_id"
                     name="incident_id"
                     value={formData.incident_id}
                     onChange={handleInputChange}
                     required
                     disabled={isSubmitting || !!preselectedIncidentId}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">Selecteer incident...</option>
                     {incidents.map(incident => (
@@ -241,7 +240,7 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
                         ({incident.priority} - {incident.status})
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                   {formData.incident_id && (
                     <div className="mt-2 p-3 bg-gray-50 rounded-md">
                       {(() => {
@@ -300,13 +299,12 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
                   <label htmlFor="assigned_to" className="text-sm font-medium">
                     Toewijzen aan <span className="text-muted-foreground">(optioneel)</span>
                   </label>
-                  <select
+                  <SelectField
                     id="assigned_to"
                     name="assigned_to"
                     value={formData.assigned_to}
                     onChange={handleInputChange}
                     disabled={isSubmitting}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">Niet toegewezen (iedereen kan oppakken)</option>
                     {availableUsers.map(user => (
@@ -314,7 +312,7 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
                         {user.username} ({user.role_name})
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                   <p className="text-xs text-gray-500">
                     Als je geen persoon selecteert, kan elke SAC de actie oppakken
                   </p>
@@ -332,6 +330,7 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = ({
                   </Button>
                   <Button
                     type="submit"
+                    variant="primary"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
