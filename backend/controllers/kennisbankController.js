@@ -1,4 +1,7 @@
 const { pool } = require('../config/db');
+const fs = require('fs');
+const path = require('path');
+const { kennisbankDir } = require('../middleware/uploadMiddleware');
 const OllamaService = require('../ai/services/ollamaService');
 
 const ollamaService = new OllamaService();
@@ -40,6 +43,7 @@ const getArticles = async (req, res) => {
         role,
         author_id,
         author_name,
+        image_filename,
         created_at,
         updated_at
       FROM KnowledgeBaseArticles
@@ -65,10 +69,13 @@ const getArticles = async (req, res) => {
   }
 };
 
-// Create new article
+// Create new article (JSON of multipart/form-data met optioneel veld `cover`)
 const createArticle = async (req, res) => {
   try {
-    const { title, content, role } = req.body;
+    const title = (req.body.title && String(req.body.title).trim()) || '';
+    const content = (req.body.content && String(req.body.content).trim()) || '';
+    const role = (req.body.role && String(req.body.role).trim()) || 'Algemeen';
+    const imageFilename = req.file ? req.file.filename : null;
     const userId = req.user.userId;
     
     // Validation
@@ -90,10 +97,10 @@ const createArticle = async (req, res) => {
     
     // Insert article
     const result = await client.query(`
-      INSERT INTO KnowledgeBaseArticles (title, content, role, author_id, author_name)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO KnowledgeBaseArticles (title, content, role, author_id, author_name, image_filename)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
-    `, [title, content, role || 'Algemeen', userId, authorName]);
+    `, [title, content, role || 'Algemeen', userId, authorName, imageFilename]);
     
     client.release();
     
@@ -112,6 +119,58 @@ const createArticle = async (req, res) => {
       message: 'Fout bij aanmaken van artikel',
       error: err.message
     });
+  }
+};
+
+const COVER_EXT_TO_MIME = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.heic': 'image/heic',
+  '.heif': 'image/heif',
+};
+
+/** Zelfde idee als incident-bijlagen: via API + auth, zodat static /uploads niet via de reverse proxy hoeft. */
+const serveArticleCover = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id) || id < 1) {
+      return res.status(400).json({ message: 'Ongeldig artikel' });
+    }
+
+    const client = await pool.connect();
+    const result = await client.query(
+      'SELECT image_filename FROM KnowledgeBaseArticles WHERE id = $1',
+      [id]
+    );
+    client.release();
+
+    if (result.rows.length === 0 || !result.rows[0].image_filename) {
+      return res.status(404).json({ message: 'Geen afbeelding bij dit artikel' });
+    }
+
+    const basename = path.basename(String(result.rows[0].image_filename));
+    const filePath = path.join(kennisbankDir, basename);
+    const resolvedBase = path.resolve(kennisbankDir);
+    const resolvedFile = path.resolve(filePath);
+    if (!resolvedFile.startsWith(resolvedBase + path.sep)) {
+      return res.status(403).json({ message: 'Geen toegang' });
+    }
+    if (!fs.existsSync(resolvedFile)) {
+      return res.status(404).json({ message: 'Bestand ontbreekt op server' });
+    }
+
+    const ext = path.extname(basename).toLowerCase();
+    const mime = COVER_EXT_TO_MIME[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Content-Disposition', `inline; filename="${basename}"`);
+    res.setHeader('Cache-Control', 'private, max-age=600');
+    fs.createReadStream(resolvedFile).pipe(res);
+  } catch (err) {
+    console.error('serveArticleCover:', err);
+    res.status(500).json({ message: 'Afbeelding serveren mislukt' });
   }
 };
 
@@ -369,9 +428,72 @@ INSTRUCTIES:
   }
 };
 
+const deleteArticle = async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || Number.isNaN(id)) {
+    return res.status(400).json({ success: false, message: 'Ongeldig artikel' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const userRes = await client.query(
+      `SELECT r.name AS role_name FROM Users u JOIN Roles r ON r.id = u.role_id WHERE u.id = $1`,
+      [req.user.userId]
+    );
+    if (!userRes.rows.length) {
+      return res.status(403).json({ success: false, message: 'Geen toegang' });
+    }
+
+    const isAdmin = userRes.rows[0].role_name === 'Admin';
+
+    const articleRes = await client.query(
+      `SELECT author_id, image_filename FROM KnowledgeBaseArticles WHERE id = $1`,
+      [id]
+    );
+    if (!articleRes.rows.length) {
+      return res.status(404).json({ success: false, message: 'Artikel niet gevonden' });
+    }
+
+    const { author_id, image_filename } = articleRes.rows[0];
+    const authorNumeric = Number(author_id);
+    const userNumeric = Number(req.user.userId);
+    if (!isAdmin && authorNumeric !== userNumeric) {
+      return res.status(403).json({
+        success: false,
+        message: 'Je kunt alleen je eigen artikelen verwijderen',
+      });
+    }
+
+    await client.query('DELETE FROM KnowledgeBaseArticles WHERE id = $1', [id]);
+
+    if (image_filename) {
+      const basename = path.basename(String(image_filename));
+      const fp = path.join(kennisbankDir, basename);
+      const resolvedBase = path.resolve(kennisbankDir);
+      const resolvedFile = path.resolve(fp);
+      if (resolvedFile.startsWith(resolvedBase + path.sep) && fs.existsSync(resolvedFile)) {
+        try {
+          fs.unlinkSync(resolvedFile);
+        } catch (unlinkErr) {
+          console.error('deleteArticle cover unlink:', unlinkErr.code || unlinkErr.message);
+        }
+      }
+    }
+
+    res.json({ success: true, message: 'Artikel verwijderd' });
+  } catch (err) {
+    console.error('deleteArticle:', err);
+    res.status(500).json({ success: false, message: 'Verwijderen mislukt' });
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getArticles,
   createArticle,
+  deleteArticle,
+  serveArticleCover,
   askOracle
 };
 

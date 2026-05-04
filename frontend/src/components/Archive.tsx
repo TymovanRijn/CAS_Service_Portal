@@ -250,15 +250,15 @@ export const Archive: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header — zelfde patroon als Acties */}
-      <div className="flex flex-col gap-3 px-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Incidenten</h1>
-          <p className="mt-1 text-sm text-slate-600 sm:text-base">Overzicht, filters en oppakken</p>
+      {/* Header: op mob/PWA alleen primaire actie; titel staat in app-header */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+        <div className="hidden lg:block">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Incidenten</h1>
+          <p className="mt-1 text-base text-slate-600">Overzicht, filters en oppakken</p>
         </div>
         <Button
           onClick={() => setIsCreateIncidentModalOpen(true)}
-          className="h-11 w-full touch-manipulation shadow-sm sm:h-10 sm:w-auto"
+          className="h-11 w-full shrink-0 touch-manipulation shadow-sm lg:h-10 lg:w-auto"
         >
           <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -272,6 +272,7 @@ export const Archive: React.FC = () => {
         activeCount={activeFilterCount}
         onQuickClear={clearFilters}
         description="Filter op zoekwoord, status, prioriteit, locatie of periode als je wilt."
+        minimalMobileChrome
       >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Search */}

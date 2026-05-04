@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
+const { sanitizeUserForClient } = require('../utils/userResponse');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
@@ -64,13 +65,12 @@ const loginUser = async (req, res) => {
       JWT_SECRET, 
       { expiresIn: '24h' }
     );
-    
-    // Don't send password hash in response
-    const { password_hash, ...userWithoutPassword } = user;
-    
+
+    const safeUser = sanitizeUserForClient(user);
+
     res.json({ 
       token,
-      user: userWithoutPassword,
+      user: safeUser,
       message: 'Login successful'
     });
   } catch (err) {
@@ -83,11 +83,10 @@ const getUserProfile = async (req, res) => {
   try {
     const client = await pool.connect();
     const result = await client.query(
-      `SELECT u.id, u.username, u.email, u.created_at, u.updated_at,
-              r.name as role_name, r.description as role_description 
-       FROM Users u 
-       JOIN Roles r ON u.role_id = r.id 
-       WHERE u.id = $1`, 
+      `SELECT u.*, r.name as role_name, r.description as role_description
+       FROM Users u
+       JOIN Roles r ON u.role_id = r.id
+       WHERE u.id = $1`,
       [req.user.userId]
     );
     client.release();
@@ -96,7 +95,7 @@ const getUserProfile = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    res.json({ user: result.rows[0] });
+    res.json({ user: sanitizeUserForClient(result.rows[0]) });
   } catch (err) {
     console.error('Profile fetch error:', err);
     res.status(500).json({ message: 'Error fetching user profile' });

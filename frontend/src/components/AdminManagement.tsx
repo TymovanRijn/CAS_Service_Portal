@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useAuth } from '../contexts/AuthContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -13,6 +14,7 @@ interface User {
   role_description: string;
   created_at: string;
   updated_at?: string;
+  avatar_url?: string | null;
 }
 
 interface Role {
@@ -387,12 +389,25 @@ export const AdminManagement: React.FC = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {users.map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                          {user.avatar_url ? (
+                            <img
+                              src={`${BACKEND_URL}${user.avatar_url}`}
+                              alt=""
+                              className="h-8 w-8 shrink-0 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-600">
+                              {user.username.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
                           <div>
                             <div className="text-sm font-medium text-gray-900">
                               {user.username}
                             </div>
                           </div>
+                        </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{user.email}</div>
@@ -617,6 +632,7 @@ export const AdminManagement: React.FC = () => {
         <UserModal
           user={editingUser}
           roles={roles}
+          reloadUsers={fetchUsers}
           onClose={() => {
             setIsUserModalOpen(false);
             setEditingUser(null);
@@ -676,9 +692,18 @@ interface UserModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onError: (error: string) => void;
+  reloadUsers?: () => void;
 }
 
-const UserModal: React.FC<UserModalProps> = ({ user, roles, onClose, onSuccess, onError }) => {
+const UserModal: React.FC<UserModalProps> = ({
+  user,
+  roles,
+  onClose,
+  onSuccess,
+  onError,
+  reloadUsers,
+}) => {
+  const { user: authUser, refreshProfile } = useAuth();
   const [formData, setFormData] = useState({
     username: user?.username || '',
     email: user?.email || '',
@@ -686,6 +711,14 @@ const UserModal: React.FC<UserModalProps> = ({ user, roles, onClose, onSuccess, 
     role_id: user ? roles.find(r => r.name === user.role_name)?.id || '' : ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(
+    () => user?.avatar_url ?? null
+  );
+
+  useEffect(() => {
+    setPreviewAvatarUrl(user?.avatar_url ?? null);
+  }, [user?.id, user?.avatar_url]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -719,6 +752,64 @@ const UserModal: React.FC<UserModalProps> = ({ user, roles, onClose, onSuccess, 
       onError('Error saving user');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setAvatarBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const multipart = new FormData();
+      multipart.append('avatar', file);
+      const response = await fetch(`${BACKEND_URL}/api/admin/users/${user.id}/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        body: multipart,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        const nextUrl = data.user?.avatar_url ?? null;
+        setPreviewAvatarUrl(nextUrl);
+        reloadUsers?.();
+        if (authUser?.id === user.id) await refreshProfile();
+      } else {
+        onError((data.message as string) || 'Avatar upload mislukt');
+      }
+    } catch {
+      onError('Avatar upload mislukt');
+    } finally {
+      setAvatarBusy(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!user) return;
+    setAvatarBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${BACKEND_URL}/api/admin/users/${user.id}/avatar`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setPreviewAvatarUrl(data.user?.avatar_url ?? null);
+        reloadUsers?.();
+        if (authUser?.id === user.id) await refreshProfile();
+      } else {
+        onError((data.message as string) || 'Avatar verwijderen mislukt');
+      }
+    } catch {
+      onError('Avatar verwijderen mislukt');
+    } finally {
+      setAvatarBusy(false);
     }
   };
 
@@ -786,6 +877,46 @@ const UserModal: React.FC<UserModalProps> = ({ user, roles, onClose, onSuccess, 
               ))}
             </select>
           </div>
+
+          {user && (
+            <div className="rounded-md border border-gray-200 p-4 space-y-3">
+              <p className="text-sm font-medium text-gray-700">Profielfoto (upload op deze server)</p>
+              <div className="flex flex-wrap items-center gap-4">
+                {previewAvatarUrl ? (
+                  <img
+                    src={`${BACKEND_URL}${previewAvatarUrl}`}
+                    alt=""
+                    className="h-14 w-14 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600">
+                    {user.username.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+                <div className="flex flex-col gap-2 min-w-[12rem]">
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    disabled={avatarBusy}
+                    onChange={handleAvatarUpload}
+                    className="cursor-pointer text-sm"
+                  />
+                  {previewAvatarUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={avatarBusy}
+                      onClick={handleAvatarRemove}
+                    >
+                      Avatar verwijderen
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">Maximaal 2 MB. JPEG, PNG, GIF of WebP.</p>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-3 pt-4">
             <Button

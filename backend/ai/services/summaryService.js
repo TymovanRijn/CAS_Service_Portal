@@ -339,7 +339,7 @@ class SummaryService {
       generatedAt: new Date().toISOString(),
       dataSource: 'CAS Service Portal',
       month: data.month,
-      aiProvider: 'Ollama (llama3.2:3b)',
+      aiProvider: `Ollama (${AI_CONFIG.ollama.model})`,
       performance: {
         realAI: true,
         cached: false

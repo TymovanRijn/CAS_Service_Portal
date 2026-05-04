@@ -1,17 +1,16 @@
 const { pool } = require('../config/db');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+const { avatarsDir } = require('../middleware/uploadMiddleware');
+const { sanitizeUserForClient } = require('../utils/userResponse');
 
 // Get all users (admin only)
 const getUsers = async (req, res) => {
   try {
     const client = await pool.connect();
     const result = await client.query(`
-      SELECT 
-        u.id, 
-        u.username, 
-        u.email, 
-        u.created_at,
-        u.updated_at,
+      SELECT u.*,
         r.name as role_name,
         r.description as role_description
       FROM Users u
@@ -19,8 +18,8 @@ const getUsers = async (req, res) => {
       ORDER BY u.created_at DESC
     `);
     client.release();
-    
-    res.json({ users: result.rows });
+
+    res.json({ users: result.rows.map(sanitizeUserForClient) });
   } catch (err) {
     console.error('Error fetching users:', err);
     res.status(500).json({ message: 'Error fetching users' });
@@ -108,23 +107,19 @@ const createUser = async (req, res) => {
     
     // Get user with role info
     const userWithRole = await client.query(`
-      SELECT 
-        u.id, 
-        u.username, 
-        u.email, 
-        u.created_at,
+      SELECT u.*,
         r.name as role_name,
         r.description as role_description
       FROM Users u
       JOIN Roles r ON u.role_id = r.id
       WHERE u.id = $1
     `, [result.rows[0].id]);
-    
+
     client.release();
-    
+
     res.status(201).json({
       message: 'Gebruiker succesvol aangemaakt',
-      user: userWithRole.rows[0]
+      user: sanitizeUserForClient(userWithRole.rows[0])
     });
   } catch (err) {
     console.error('Error creating user:', err);
@@ -223,24 +218,19 @@ const updateUser = async (req, res) => {
     
     // Get updated user with role info
     const userWithRole = await client.query(`
-      SELECT 
-        u.id, 
-        u.username, 
-        u.email, 
-        u.created_at,
-        u.updated_at,
+      SELECT u.*,
         r.name as role_name,
         r.description as role_description
       FROM Users u
       JOIN Roles r ON u.role_id = r.id
       WHERE u.id = $1
     `, [id]);
-    
+
     client.release();
-    
+
     res.json({
       message: 'Gebruiker succesvol bijgewerkt',
-      user: userWithRole.rows[0]
+      user: sanitizeUserForClient(userWithRole.rows[0])
     });
   } catch (err) {
     console.error('Error updating user:', err);
@@ -256,12 +246,17 @@ const deleteUser = async (req, res) => {
     const client = await pool.connect();
     
     // Check if user exists
-    const existingUser = await client.query('SELECT id, username FROM Users WHERE id = $1', [id]);
+    const existingUser = await client.query(
+      'SELECT id, username, avatar_filename FROM Users WHERE id = $1',
+      [id]
+    );
     if (existingUser.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Gebruiker niet gevonden' });
     }
-    
+
+    const avatarToRemove = existingUser.rows[0].avatar_filename;
+
     // Prevent user from deleting themselves
     if (req.user.userId === parseInt(id)) {
       client.release();
@@ -284,7 +279,18 @@ const deleteUser = async (req, res) => {
         message: `Gebruiker kan niet verwijderd worden. Heeft ${incidents} incident(en) en ${actions} actie(s) in het systeem.`
       });
     }
-    
+
+    if (avatarToRemove) {
+      const avatarPath = path.join(avatarsDir, avatarToRemove);
+      if (fs.existsSync(avatarPath)) {
+        try {
+          fs.unlinkSync(avatarPath);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
     await client.query('DELETE FROM Users WHERE id = $1', [id]);
     client.release();
     
@@ -292,6 +298,141 @@ const deleteUser = async (req, res) => {
   } catch (err) {
     console.error('Error deleting user:', err);
     res.status(500).json({ message: 'Error deleting user' });
+  }
+};
+
+const uploadUserAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Geen bestand geüpload (veldnaam: avatar).' });
+    }
+    const userId = parseInt(req.params.id, 10);
+    if (Number.isNaN(userId)) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ message: 'Ongeldige gebruiker' });
+    }
+
+    const client = await pool.connect();
+    const existing = await client.query(
+      'SELECT id, avatar_filename FROM Users WHERE id = $1',
+      [userId]
+    );
+
+    if (existing.rows.length === 0) {
+      client.release();
+      fs.unlink(req.file.path, () => {});
+      return res.status(404).json({ message: 'Gebruiker niet gevonden' });
+    }
+
+    const prev = existing.rows[0].avatar_filename;
+    const newFilename = req.file.filename;
+
+    await client.query(
+      'UPDATE Users SET avatar_filename = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [newFilename, userId]
+    );
+
+    if (prev && prev !== newFilename) {
+      const oldPath = path.join(avatarsDir, prev);
+      if (fs.existsSync(oldPath)) {
+        try {
+          fs.unlinkSync(oldPath);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
+    const userWithRole = await client.query(
+      `SELECT u.*, r.name AS role_name, r.description AS role_description
+       FROM Users u
+       JOIN Roles r ON u.role_id = r.id
+       WHERE u.id = $1`,
+      [userId]
+    );
+    client.release();
+
+    res.json({
+      message: 'Avatar bijgewerkt',
+      user: sanitizeUserForClient(userWithRole.rows[0])
+    });
+  } catch (err) {
+    console.error('Avatar upload error:', err.code || err.message, err);
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    res.status(500).json({ message: 'Avatar upload mislukt' });
+  }
+};
+
+const deleteUserAvatar = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ message: 'Ongeldige gebruiker' });
+    }
+
+    const client = await pool.connect();
+    const existing = await client.query(
+      'SELECT id, avatar_filename FROM Users WHERE id = $1',
+      [userId]
+    );
+
+    if (existing.rows.length === 0) {
+      client.release();
+      return res.status(404).json({ message: 'Gebruiker niet gevonden' });
+    }
+
+    const prev = existing.rows[0].avatar_filename;
+    if (!prev) {
+      const userWithRole = await client.query(
+        `SELECT u.*, r.name AS role_name, r.description AS role_description
+         FROM Users u
+         JOIN Roles r ON u.role_id = r.id
+         WHERE u.id = $1`,
+        [userId]
+      );
+      client.release();
+      return res.json({
+        message: 'Geen avatar om te verwijderen',
+        user: sanitizeUserForClient(userWithRole.rows[0])
+      });
+    }
+
+    await client.query(
+      'UPDATE Users SET avatar_filename = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [userId]
+    );
+
+    const avatarPath = path.join(avatarsDir, prev);
+    if (fs.existsSync(avatarPath)) {
+      try {
+        fs.unlinkSync(avatarPath);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    const userWithRole = await client.query(
+      `SELECT u.*, r.name AS role_name, r.description AS role_description
+       FROM Users u
+       JOIN Roles r ON u.role_id = r.id
+       WHERE u.id = $1`,
+      [userId]
+    );
+    client.release();
+
+    res.json({
+      message: 'Avatar verwijderd',
+      user: sanitizeUserForClient(userWithRole.rows[0])
+    });
+  } catch (err) {
+    console.error('Avatar delete error:', err);
+    res.status(500).json({ message: 'Avatar verwijderen mislukt' });
   }
 };
 
@@ -323,5 +464,7 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
+  uploadUserAvatar,
+  deleteUserAvatar,
   getUserStats
 }; 

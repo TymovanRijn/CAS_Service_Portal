@@ -1,17 +1,124 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { useAuth } from '../contexts/AuthContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+
+/** Geauthenticeerde cover (zelfde idee als IncidentDetailModal: static /uploads/ faalt achter veel proxy’s). */
+function ArticleCoverImage({ articleId }: { articleId: number }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const urlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFailed(false);
+
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    setSrc(null);
+
+    (async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${BACKEND_URL}/api/kennisbank/articles/${articleId}/cover`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include',
+        });
+        if (cancelled) return;
+        if (!res.ok) throw new Error('bad');
+        const blob = await res.blob();
+        if (cancelled) return;
+        const u = URL.createObjectURL(blob);
+        urlRef.current = u;
+        setSrc(u);
+      } catch {
+        if (!cancelled) setFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (urlRef.current) {
+        URL.revokeObjectURL(urlRef.current);
+        urlRef.current = null;
+      }
+    };
+  }, [articleId]);
+
+  if (loading) {
+    return (
+      <div
+        className="mx-auto mt-8 h-52 max-w-2xl animate-pulse rounded-2xl bg-muted/50"
+        aria-hidden
+      />
+    );
+  }
+  if (failed || !src) {
+    return (
+      <p className="mx-auto mt-8 max-w-2xl text-sm text-muted-foreground">
+        Afbeelding kon niet worden geladen.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-8 max-w-2xl space-y-3">
+      <div className="overflow-hidden rounded-2xl border border-border/40 bg-muted/15 p-2 shadow-sm">
+        <img
+          src={src}
+          alt=""
+          className="mx-auto max-h-[min(70vh,28rem)] w-full rounded-xl object-contain"
+        />
+      </div>
+      <div className="flex justify-center">
+        <button
+          type="button"
+          className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          onClick={() => window.open(src, '_blank', 'noopener,noreferrer')}
+        >
+          Open in nieuw tabblad
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ArticleIllustrationHintIcon(props: { className?: string }) {
+  return (
+    <svg
+      className={props.className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
 
 interface Article {
   id: number;
   title: string;
   content: string;
   role: string;
+  author_id: number | null;
   author_name: string;
   created_at: string;
+  image_filename?: string | null;
 }
 
 interface RelevantArticle {
@@ -40,9 +147,38 @@ export const AIKennisbank: React.FC = () => {
   const [error, setError] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [deleteKbLoading, setDeleteKbLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const roles = ['Algemeen', 'Billing', 'Technisch', 'Retentie', 'Zakelijk'];
+
+  const coverPreviewUrl = useMemo(() => {
+    if (!coverFile) return null;
+    return URL.createObjectURL(coverFile);
+  }, [coverFile]);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+    };
+  }, [coverPreviewUrl]);
+
+  const resetAddArticleForm = () => {
+    setNewArticle({ title: '', content: '', role: 'Algemeen' });
+    setCoverFile(null);
+    setError('');
+  };
+
+  const openAddArticle = () => {
+    resetAddArticleForm();
+    setIsAddingArticle(true);
+  };
+
+  const closeAddArticle = () => {
+    resetAddArticleForm();
+    setIsAddingArticle(false);
+  };
 
   useEffect(() => {
     fetchArticles();
@@ -75,7 +211,7 @@ export const AIKennisbank: React.FC = () => {
 
   const handleAddArticle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newArticle.title || !newArticle.content) {
+    if (!newArticle.title.trim() || !newArticle.content.trim()) {
       setError('Titel en inhoud zijn verplicht');
       return;
     }
@@ -83,27 +219,78 @@ export const AIKennisbank: React.FC = () => {
     try {
       setError('');
       const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('title', newArticle.title.trim());
+      formData.append('content', newArticle.content.trim());
+      formData.append('role', newArticle.role);
+      if (coverFile) {
+        formData.append('cover', coverFile);
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/kennisbank/articles`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         credentials: 'include',
-        body: JSON.stringify(newArticle)
+        body: formData
       });
 
       if (response.ok) {
-        setIsAddingArticle(false);
-        setNewArticle({ title: '', content: '', role: 'Algemeen' });
         await fetchArticles();
+        closeAddArticle();
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Fout bij toevoegen van artikel');
+        let message = 'Fout bij toevoegen van artikel';
+        try {
+          const errorData = await response.json();
+          message = errorData.message || message;
+        } catch {
+          // ignore JSON parse failure
+        }
+        setError(message);
       }
     } catch (err) {
       console.error('Error adding article:', err);
       setError('Netwerkfout bij toevoegen van artikel');
+    }
+  };
+
+  const deleteKnowledgeArticle = async (article: Article) => {
+    const ok = window.confirm(
+      `"${article.title}" definitief uit de kennisbank verwijderen? Dit kan niet ongedaan worden gemaakt.`
+    );
+    if (!ok) return;
+
+    try {
+      setDeleteKbLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${BACKEND_URL}/api/kennisbank/articles/${article.id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+
+      let message = 'Verwijderen mislukt';
+      try {
+        const body = await response.json();
+        if (body.message) message = body.message;
+      } catch {
+        /* empty */
+      }
+
+      if (!response.ok) {
+        window.alert(message);
+        return;
+      }
+
+      setIsArticleModalOpen(false);
+      setSelectedArticle(null);
+      await fetchArticles();
+    } catch (err) {
+      console.error('deleteKnowledgeArticle:', err);
+      window.alert('Netwerkfout bij verwijderen');
+    } finally {
+      setDeleteKbLoading(false);
     }
   };
 
@@ -186,7 +373,7 @@ export const AIKennisbank: React.FC = () => {
         }
         // Add bold text with better styling
         parts.push(
-          <strong key={`bold-${key++}`} className="font-bold text-gray-900">
+          <strong key={`bold-${key++}`} className="font-bold text-foreground">
             {match[1]}
           </strong>
         );
@@ -233,18 +420,16 @@ export const AIKennisbank: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-0.5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">AI Kennisbank</h1>
-          <p className="mt-1 text-sm text-slate-600 sm:text-base">
-            Artikelen beheren en vragen aan het Orakel — op basis van jullie kennis
-          </p>
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+        <div className="hidden lg:block">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">AI Kennisbank</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Orakel en bibliotheek uit één bron</p>
         </div>
         <Button
           type="button"
-          onClick={() => setIsAddingArticle(true)}
-          className="h-11 w-full touch-manipulation shadow-sm sm:h-10 sm:w-auto"
+          onClick={openAddArticle}
+          className="h-11 w-full shrink-0 shadow-sm transition-colors duration-200 lg:h-10 lg:w-auto"
         >
           <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -255,11 +440,11 @@ export const AIKennisbank: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-sm text-red-800 transition-colors duration-200">
+          <div className="flex items-center justify-between gap-2">
             <span>{error}</span>
-            <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button type="button" onClick={() => setError('')} className="rounded-lg p-1 text-red-600 hover:bg-red-100/80">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -267,15 +452,15 @@ export const AIKennisbank: React.FC = () => {
         </div>
       )}
 
-      {/* Tabs — zelfde segment-stijl als Acties */}
-      <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-xl border border-border/80 bg-muted/50 p-1 shadow-sm">
           <button
             type="button"
             onClick={() => setActiveTab('oracle')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors touch-manipulation sm:py-3 ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 touch-manipulation sm:py-3 ${
               activeTab === 'oracle'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-background text-foreground shadow-sm ring-1 ring-black/[0.06]'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <svg className="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -286,10 +471,10 @@ export const AIKennisbank: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('articles')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors touch-manipulation sm:py-3 ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 touch-manipulation sm:py-3 ${
               activeTab === 'articles'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-background text-foreground shadow-sm ring-1 ring-black/[0.06]'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <svg className="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -301,65 +486,40 @@ export const AIKennisbank: React.FC = () => {
 
       {/* Main Content */}
       {activeTab === 'oracle' ? (
-        <Card className="border-slate-200/90 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold sm:text-lg">Het Orakel</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              Antwoorden op basis van alle artikelen in de kennisbank.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Chat History */}
+        <div className="rounded-2xl border border-border/80 bg-card shadow-sm ring-1 ring-black/[0.03]">
+          <div className="p-4 sm:p-5">
+            {/* Chat */}
             <div
               ref={scrollRef}
-              className="mb-4 max-h-[min(24rem,55svh)] min-h-[14rem] space-y-4 overflow-y-auto overscroll-contain rounded-lg border border-slate-200/80 bg-slate-50/80 p-3 sm:p-4"
+              className="mb-4 max-h-[min(24rem,55svh)] min-h-[13rem] space-y-3 overflow-y-auto overscroll-contain rounded-xl border border-border/60 bg-muted/30 p-3 sm:min-h-[14rem] sm:p-4"
             >
               {chatHistory.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-75">
-                  <div className="bg-primary/10 p-6 rounded-full">
-                    <svg className="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                  </div>
-                  <div className="max-w-md">
-                    <h3 className="text-xl font-bold text-gray-800">Stel een vraag aan het Orakel</h3>
-                    <p className="text-gray-500 mt-2">
-                      Ik ken alle artikelen die jij en je collega's hebben geschreven. Hoe kan ik je vandaag helpen?
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2 mt-6">
-                      {['Hoe werkt de nieuwe billing flow?', 'Wat is de procedure voor retentie?', 'Problemen met glasvezel?'].map((q, i) => (
-                        <button 
-                          key={i} 
-                          onClick={() => { setOracleQuery(q); }}
-                          className="bg-white border border-gray-200 hover:border-primary px-4 py-2 rounded-lg text-sm text-gray-600 transition-all hover:shadow-sm"
-                        >
-                          "{q}"
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                <div className="flex h-full min-h-[12rem] flex-col items-center justify-center px-2 text-center">
+                  <p className="max-w-xs text-sm text-muted-foreground">
+                    Antwoorden zijn gebaseerd op artikelen in de bibliotheek. Stel hieronder je vraag.
+                  </p>
                 </div>
               ) : (
                 chatHistory.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                      <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        msg.role === 'user' ? 'bg-gray-700' : 'bg-primary'
+                      <div className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-full ${
+                        msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                       }`}>
                         {msg.role === 'user' ? (
                           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         ) : (
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                           </svg>
                         )}
                       </div>
-                      <div className={`rounded-2xl px-5 py-4 shadow-sm ${
-                        msg.role === 'user' 
-                          ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                          : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                      <div className={`rounded-2xl px-4 py-3 shadow-sm transition-transform duration-150 sm:px-5 sm:py-4 ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'border border-border bg-background text-foreground'
                       }`}>
                         <div className="text-sm leading-relaxed">
                           {msg.role === 'oracle' ? renderMarkdown(msg.content) : (
@@ -369,22 +529,16 @@ export const AIKennisbank: React.FC = () => {
                         
                         {/* Show the article that was used for this answer */}
                         {msg.role === 'oracle' && msg.relevantArticles && msg.relevantArticles.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <div className="flex items-center gap-2 mb-3">
-                              <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                              </svg>
-                              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                                {msg.relevantArticles.length === 1 ? 'Gebruikt Artikel' : 'Gebruikte Artikelen'}
-                              </span>
-                            </div>
+                          <div className="mt-3 border-t border-border pt-3">
+                            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                              {msg.relevantArticles.length === 1 ? 'Bron' : 'Bronnen'}
+                            </p>
                             <div className="space-y-2">
                               {msg.relevantArticles.map((article) => {
-                                // Find full article from articles list
                                 const fullArticle = articles.find(a => a.id === article.id);
-                                
                                 return (
                                   <button
+                                    type="button"
                                     key={article.id}
                                     onClick={() => {
                                       if (fullArticle) {
@@ -392,35 +546,17 @@ export const AIKennisbank: React.FC = () => {
                                         setIsArticleModalOpen(true);
                                       }
                                     }}
-                                    className="w-full text-left bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 border-2 border-primary/20 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group"
+                                    className="relative flex w-full gap-3 rounded-xl border border-border bg-muted/40 p-3 text-left transition-colors hover:bg-muted active:scale-[0.99]"
                                   >
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <h4 className="font-bold text-sm text-gray-900 group-hover:text-primary transition-colors">
-                                            {article.title}
-                                          </h4>
-                                          <svg className="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                          </svg>
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <span className="px-2.5 py-1 bg-primary text-white text-xs font-bold uppercase rounded-md">
-                                            {article.role}
-                                          </span>
-                                        </div>
-                                        <p className="text-xs text-gray-700 line-clamp-2 leading-relaxed mb-2">
-                                          {article.content}
-                                        </p>
-                                        <span className="text-xs text-primary font-semibold inline-flex items-center gap-1 group-hover:underline">
-                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                          </svg>
-                                          Klik om volledig artikel te bekijken
-                                        </span>
-                                      </div>
-                                    </div>
+                                    {fullArticle?.image_filename ? (
+                                      <span className="absolute right-3 top-3 text-muted-foreground/[0.18]" title="Met illustratie">
+                                        <ArticleIllustrationHintIcon className="h-4 w-4" />
+                                      </span>
+                                    ) : null}
+                                    <span className="min-w-0 flex-1 pr-6">
+                                      <span className="block text-xs font-semibold text-foreground">{article.title}</span>
+                                      <span className="mt-1 block text-[11px] text-muted-foreground line-clamp-2">{article.content}</span>
+                                    </span>
                                   </button>
                                 );
                               })}
@@ -434,12 +570,12 @@ export const AIKennisbank: React.FC = () => {
               )}
               {isOracleLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-3">
-                    <svg className="animate-spin w-4 h-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
+                    <svg className="h-4 w-4 animate-spin text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span className="text-sm font-medium text-gray-500 italic">Het Orakel raadpleegt de bronnen...</span>
+                    <span className="text-xs text-muted-foreground">Zoekt in artikelen…</span>
                   </div>
                 </div>
               )}
@@ -447,19 +583,27 @@ export const AIKennisbank: React.FC = () => {
 
             {/* Input Bar */}
             <div className="relative">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={oracleQuery}
                 onChange={(e) => setOracleQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && askOracle()}
-                placeholder="Vraag het Orakel..."
-                className="w-full bg-white border-2 border-gray-200 focus:border-primary rounded-2xl py-4 pl-6 pr-16 shadow-lg transition-all outline-none text-gray-800 placeholder:text-gray-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    askOracle();
+                  }
+                }}
+                placeholder="Stel een vraag…"
+                className="w-full rounded-full border border-input bg-background py-3 pl-5 pr-14 text-sm text-foreground shadow-sm outline-none transition-shadow placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
-              <button 
+              <button
+                type="button"
                 onClick={askOracle}
                 disabled={!oracleQuery.trim() || isOracleLoading}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
-                  oracleQuery.trim() ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'
+                className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 transition-colors ${
+                  oracleQuery.trim()
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'cursor-not-allowed bg-muted text-muted-foreground'
                 }`}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -467,36 +611,32 @@ export const AIKennisbank: React.FC = () => {
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-center text-gray-400 mt-2">
-              Het Orakel baseert antwoorden uitsluitend op de artikelen in de Bibliotheek.
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
-          {/* Search */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900 sm:text-lg">Bibliotheek</h2>
-              <p className="mt-1 text-sm text-slate-600">Zoek en open artikelen</p>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="hidden lg:block lg:min-w-0">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">Bibliotheek</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">Zoek en open een artikel</p>
             </div>
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="relative w-full lg:max-w-sm">
+              <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Zoek op titel of rol..."
-                className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-full text-sm outline-none focus:ring-2 focus:ring-primary/20 w-64 transition-all"
+                placeholder="Zoek titel of rol…"
+                className="w-full rounded-full border border-input bg-background py-2.5 pl-10 pr-4 text-sm text-foreground shadow-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring placeholder:text-muted-foreground"
               />
             </div>
           </div>
 
           {/* Articles Grid */}
           {filteredArticles.length === 0 ? (
-            <Card className="border border-slate-200/90 shadow-sm">
+            <Card className="border-border/80 shadow-sm">
               <CardContent className="py-12 text-center">
                 <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -511,7 +651,7 @@ export const AIKennisbank: React.FC = () => {
                 </p>
                 {!searchQuery && (
                   <Button 
-                    onClick={() => setIsAddingArticle(true)}
+                    onClick={openAddArticle}
                     className="bg-primary hover:bg-primary/90"
                   >
                     Start de kennisbank
@@ -520,11 +660,11 @@ export const AIKennisbank: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
               {filteredArticles.map((article) => (
                 <Card 
-                  key={article.id} 
-                  className="cursor-pointer border border-slate-200/90 transition-colors hover:bg-slate-50/90"
+                  key={article.id}
+                  className="cursor-pointer overflow-hidden border-border/80 bg-card shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   onClick={() => {
                     setSelectedArticle(article);
                     setIsArticleModalOpen(true);
@@ -541,8 +681,13 @@ export const AIKennisbank: React.FC = () => {
                         </svg>
                         {formatDate(article.created_at)}
                       </span>
+                      {article.image_filename ? (
+                        <span className="ml-auto text-muted-foreground/[0.22]" title="Artikel heeft een illustratie">
+                          <ArticleIllustrationHintIcon className="h-[18px] w-[18px]" />
+                        </span>
+                      ) : null}
                     </div>
-                    <CardTitle className="text-lg leading-tight group-hover:text-primary transition-colors">{article.title}</CardTitle>
+                    <CardTitle className="text-lg leading-tight transition-colors">{article.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-gray-600 line-clamp-3 mb-4 leading-relaxed">
@@ -557,7 +702,7 @@ export const AIKennisbank: React.FC = () => {
                         </div>
                         <span className="text-xs font-bold text-gray-500">Gedeeld door {article.author_name}</span>
                       </div>
-                      <span className="text-xs font-medium text-slate-600">Openen</span>
+                      <span className="text-xs font-medium text-muted-foreground">Openen</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -574,18 +719,14 @@ export const AIKennisbank: React.FC = () => {
             type="button"
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             aria-label="Sluiten"
-            onClick={() => {
-              setIsAddingArticle(false);
-              setNewArticle({ title: '', content: '', role: 'Algemeen' });
-              setError('');
-            }}
+            onClick={closeAddArticle}
           />
           <div className="relative mx-auto flex min-h-full justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
             <Card
-              className="relative my-auto w-full max-w-2xl flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] flex-col overflow-hidden rounded-2xl border-slate-200/90 shadow-xl"
+            className="relative my-auto w-full max-w-2xl flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] flex-col overflow-hidden rounded-2xl border-border shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
-            <CardHeader className="shrink-0 flex flex-row items-center justify-between border-b border-slate-100 bg-slate-50/90">
+            <CardHeader className="shrink-0 flex flex-row items-center justify-between border-b border-border bg-muted/40">
               <div className="flex items-center gap-3">
                 <div className="bg-primary p-2 rounded-lg">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -595,11 +736,8 @@ export const AIKennisbank: React.FC = () => {
                 <CardTitle>Nieuwe Kennis Toevoegen</CardTitle>
               </div>
               <button 
-                onClick={() => {
-                  setIsAddingArticle(false);
-                  setNewArticle({ title: '', content: '', role: 'Algemeen' });
-                  setError('');
-                }} 
+                type="button"
+                onClick={closeAddArticle}
                 className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-200 rounded-full transition-all"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -610,6 +748,9 @@ export const AIKennisbank: React.FC = () => {
             
             <form onSubmit={handleAddArticle} className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <div className="space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
+              {error ? (
+                <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
+              ) : null}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
@@ -640,6 +781,33 @@ export const AIKennisbank: React.FC = () => {
               </div>
 
               <div>
+                <label
+                  htmlFor="kb-cover-image"
+                  className="mb-1.5 ml-1 block text-xs font-bold uppercase tracking-widest text-gray-400"
+                >
+                  Illustratie (optioneel)
+                </label>
+                <input
+                  id="kb-cover-image"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setCoverFile(f);
+                  }}
+                />
+                <p className="mt-1 ml-1 text-[11px] text-muted-foreground">JPEG, PNG, GIF of WebP, tot 5&nbsp;MB.</p>
+                {coverPreviewUrl ? (
+                  <img
+                    src={coverPreviewUrl}
+                    alt="Voorbeeld omslag"
+                    className="mt-3 max-h-48 w-auto rounded-xl border border-border object-contain shadow-sm"
+                  />
+                ) : null}
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
                   De Kennis (Uitleg)
                 </label>
@@ -655,15 +823,11 @@ export const AIKennisbank: React.FC = () => {
 
               </div>
 
-              <div className="flex shrink-0 gap-3 border-t border-slate-100 bg-slate-50/80 px-4 py-3 sm:p-6">
+              <div className="flex shrink-0 gap-3 border-t border-border bg-muted/30 px-4 py-3 sm:p-6">
                 <Button 
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setIsAddingArticle(false);
-                    setNewArticle({ title: '', content: '', role: 'Algemeen' });
-                    setError('');
-                  }}
+                  onClick={closeAddArticle}
                   className="flex-1"
                 >
                   Annuleren
@@ -695,11 +859,11 @@ export const AIKennisbank: React.FC = () => {
           />
           <div className="relative mx-auto flex min-h-full justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4">
           <Card
-            className="relative my-auto w-full max-w-3xl max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] flex flex-col overflow-hidden rounded-2xl border-slate-200/90 shadow-xl"
+            className="relative my-auto w-full max-w-3xl max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] flex flex-col overflow-hidden rounded-2xl border-border shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <CardHeader className="shrink-0 flex flex-row items-center justify-between border-b border-slate-100 bg-slate-50/90">
-              <div className="flex-1 min-w-0">
+            <CardHeader className="shrink-0 flex flex-row items-start justify-between gap-3 border-b border-border bg-muted/40 pb-4">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold uppercase rounded-md">
                     {selectedArticle.role}
@@ -713,17 +877,36 @@ export const AIKennisbank: React.FC = () => {
                 </div>
                 <CardTitle className="text-2xl">{selectedArticle.title}</CardTitle>
               </div>
-              <button 
-                onClick={() => {
-                  setIsArticleModalOpen(false);
-                  setSelectedArticle(null);
-                }} 
-                className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-200 rounded-full transition-all ml-4 flex-shrink-0"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-start">
+                {user &&
+                selectedArticle &&
+                (user.role_name === 'Admin' ||
+                  Number(user.id) === Number(selectedArticle.author_id)) ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={deleteKbLoading}
+                    className="h-9 touch-manipulation whitespace-nowrap text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => deleteKnowledgeArticle(selectedArticle)}
+                  >
+                    {deleteKbLoading ? 'Verwijderen…' : 'Verwijderen'}
+                  </Button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsArticleModalOpen(false);
+                    setSelectedArticle(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-200 rounded-full transition-all"
+                  aria-label="Sluiten"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </CardHeader>
             
             <CardContent className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
@@ -732,6 +915,10 @@ export const AIKennisbank: React.FC = () => {
                   {selectedArticle.content}
                 </div>
               </div>
+
+              {selectedArticle.image_filename ? (
+                <ArticleCoverImage articleId={selectedArticle.id} />
+              ) : null}
               
               <div className="mt-6 pt-6 border-t border-gray-200 flex items-center gap-3">
                 <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">

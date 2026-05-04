@@ -39,6 +39,10 @@ async function setupDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    await client.query(`
+      ALTER TABLE Users ADD COLUMN IF NOT EXISTS avatar_filename VARCHAR(255)
+    `);
     
     // Create Categories table
     console.log('🏷️ Creating Categories table...');
@@ -203,6 +207,11 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE KnowledgeBaseArticles
+      ADD COLUMN IF NOT EXISTS image_filename VARCHAR(500)
     `);
     
     // Create Schedules table

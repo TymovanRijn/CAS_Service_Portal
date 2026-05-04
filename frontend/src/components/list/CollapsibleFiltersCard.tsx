@@ -11,6 +11,8 @@ type Props = {
   defaultOpen?: boolean;
   /** Wis-knop onderaan de inhoud wordt door de ouder geleverd als child; dit is een snelle wis in de kop */
   onQuickClear?: () => void;
+  /** Onder lg: geen kaartkop/tekst — alleen de filters-knop (lijst blijft rustig op telefoon). */
+  minimalMobileChrome?: boolean;
   children: React.ReactNode;
 };
 
@@ -24,15 +26,20 @@ export const CollapsibleFiltersCard: React.FC<Props> = ({
   activeCount = 0,
   defaultOpen = false,
   onQuickClear,
+  minimalMobileChrome = false,
   children
 }) => {
   const [open, setOpen] = useState(defaultOpen);
 
+  const cardMobile =
+    minimalMobileChrome &&
+    'max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:shadow-none max-lg:ring-0';
+
   return (
-    <Card className="border-slate-200/90 shadow-sm lg:shadow-none">
-      <CardHeader className="space-y-0 pb-2">
+    <Card className={`border-slate-200/90 shadow-sm lg:shadow-none ${cardMobile || ''}`}>
+      <CardHeader className={`space-y-0 pb-2 ${minimalMobileChrome ? 'max-lg:p-0 max-lg:pb-0' : ''}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
+          <div className={`min-w-0 ${minimalMobileChrome ? 'hidden lg:block' : ''}`}>
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
               {!open && activeCount > 0 && (
@@ -43,7 +50,14 @@ export const CollapsibleFiltersCard: React.FC<Props> = ({
             </div>
             <CardDescription className="mt-1 text-xs sm:text-sm">{description}</CardDescription>
           </div>
-          <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
+          <div
+            className={`flex shrink-0 flex-wrap items-center gap-2 sm:ml-auto ${minimalMobileChrome ? 'max-lg:w-full' : ''}`}
+          >
+            {minimalMobileChrome && !open && activeCount > 0 && (
+              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold leading-none text-white lg:hidden">
+                {activeCount} actief
+              </span>
+            )}
             {activeCount > 0 && open && onQuickClear && (
               <Button variant="ghost" size="sm" type="button" className="h-9 touch-manipulation" onClick={onQuickClear}>
                 Alles wissen
@@ -53,7 +67,7 @@ export const CollapsibleFiltersCard: React.FC<Props> = ({
               type="button"
               variant="outline"
               size="sm"
-              className="h-10 min-w-[8.5rem] touch-manipulation"
+              className={`h-10 touch-manipulation ${minimalMobileChrome ? 'max-lg:min-w-0 max-lg:flex-1 sm:min-w-[8.5rem]' : 'min-w-[8.5rem]'}`}
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
             >
@@ -76,7 +90,13 @@ export const CollapsibleFiltersCard: React.FC<Props> = ({
           </div>
         </div>
       </CardHeader>
-      {open && <CardContent className="border-t border-slate-100 pt-4">{children}</CardContent>}
+      {open && (
+        <CardContent
+          className={`border-t border-slate-100 pt-4 ${minimalMobileChrome ? 'max-lg:mt-3 max-lg:rounded-xl max-lg:border max-lg:border-border/80 max-lg:bg-card max-lg:p-4 max-lg:pt-4' : ''}`}
+        >
+          {children}
+        </CardContent>
+      )}
     </Card>
   );
 };

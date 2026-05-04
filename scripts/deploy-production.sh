@@ -67,15 +67,29 @@ sync_copy() {
   fi
 
   # Fallback when rsync is unavailable:
-  # 1) remove current target contents
-  # 2) copy new files while honoring exclude patterns
+  # 1) verwijder alles onder dst behalve top-level entries die ook als --exclude bij tar gelden:
+  #    tar pakt ze niet uit de bron, dus eerder werden ze hier wél verwijderd → o.a. uploads weg bij deploy).
+  # 2) kopieer nieuwe bestanden uit de bron met exclude-patterns
   sudo mkdir -p "$dst"
-  sudo find "$dst" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-
   if [ "${#excludes[@]}" -eq 0 ]; then
+    sudo find "$dst" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
     sudo cp -a "${src%/}/." "$dst"
     return
   fi
+
+  while IFS= read -r -d '' entry; do
+    local base="${entry##*/}"
+    local skip_rm=0
+    for ex in "${excludes[@]}"; do
+      if [[ "$base" == "$ex" ]]; then
+        skip_rm=1
+        break
+      fi
+    done
+    if [[ "$skip_rm" -eq 0 ]]; then
+      sudo rm -rf "$entry"
+    fi
+  done < <(sudo find "$dst" -mindepth 1 -maxdepth 1 -print0 2>/dev/null || true)
 
   local tar_excludes=()
   local ex
@@ -127,9 +141,21 @@ ensure_env_value "DB_PASSWORD"
 reject_placeholder_env "JWT_SECRET" "replace_with_a_long_random_secret"
 reject_placeholder_env "DB_PASSWORD" "replace_with_db_password"
 
-echo "==> Building frontend production assets"
+# Frontend build-nummer (teller past na succesvolle build toe; zo blijven nummers oplopen per live build)
+SEQ_FILE="${PROJECT_ROOT}/scripts/.deploy_build_seq"
+prev="$(cat "$SEQ_FILE" 2>/dev/null || echo 0)"
+deploy_seq="$((prev + 1))"
+short_sha="nogit"
+if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  short_sha="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo nogit)"
+fi
+BUILD_NUMBER_LABEL="nr. ${deploy_seq} · ${timestamp} · git ${short_sha}"
+export REACT_APP_BUILD_NUMBER="${BUILD_NUMBER_LABEL}"
+
+echo "==> Building frontend production assets (${BUILD_NUMBER_LABEL})"
 npm --prefix "$FRONTEND_DIR" install
 npm --prefix "$FRONTEND_DIR" run build
+echo "${deploy_seq}" >"$SEQ_FILE"
 
 if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "==> Deploying from git $(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?') ($(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?'))"

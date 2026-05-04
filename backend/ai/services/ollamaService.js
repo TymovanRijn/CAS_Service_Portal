@@ -114,7 +114,7 @@ class OllamaService {
     const prompt = this.buildMonthlySummaryPrompt(data);
     
     return await this.generateText(prompt, {
-      model: 'llama3.2:3b',
+      model: this.config.model,
       temperature: 0.7,
       maxTokens: 1000
     });
@@ -183,7 +183,7 @@ DEZE MAAND:
 Schrijf een korte trendanalyse in het Nederlands (max 200 woorden) die de veranderingen beschrijft en mogelijke oorzaken suggereert.`;
 
     return await this.generateText(prompt, {
-      model: 'qwen2.5:3b',
+      model: this.config.model,
       temperature: 0.6,
       maxTokens: 300
     });

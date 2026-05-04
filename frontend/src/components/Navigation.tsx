@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { getNavigationItems, getPageTitle } from '../navigationConfig';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+
 interface NavigationProps {
   currentPage: string;
   onPageChange: (page: string) => void;
@@ -18,6 +20,11 @@ export const Navigation: React.FC<NavigationProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
+  const [avatarImageFailed, setAvatarImageFailed] = useState(false);
+
+  useEffect(() => {
+    setAvatarImageFailed(false);
+  }, [user?.avatar_url]);
 
   useEffect(() => {
     if (onSidebarToggle) {
@@ -82,7 +89,16 @@ export const Navigation: React.FC<NavigationProps> = ({
               aria-haspopup="menu"
               aria-controls="mobile-account-menu"
             >
-              {avatarInitial}
+              {user.avatar_url && !avatarImageFailed ? (
+                <img
+                  src={`${BACKEND_URL}${user.avatar_url}`}
+                  alt=""
+                  className="h-9 w-9 rounded-full object-cover"
+                  onError={() => setAvatarImageFailed(true)}
+                />
+              ) : (
+                <span>{avatarInitial}</span>
+              )}
             </button>
             {accountOpen && (
               <div
@@ -249,15 +265,17 @@ export const Navigation: React.FC<NavigationProps> = ({
                 isCollapsed ? 'justify-center' : 'space-x-3'
               }`}
             >
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">
-                <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+                {user.avatar_url && !avatarImageFailed ? (
+                  <img
+                    src={`${BACKEND_URL}${user.avatar_url}`}
+                    alt=""
+                    className="h-10 w-10 object-cover"
+                    onError={() => setAvatarImageFailed(true)}
                   />
-                </svg>
+                ) : (
+                  <span className="text-[11px] font-bold text-gray-600">{avatarInitial}</span>
+                )}
               </div>
               <div
                 className={`min-w-0 flex-1 transition-all duration-300 ${

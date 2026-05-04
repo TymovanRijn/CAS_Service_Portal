@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -10,6 +10,7 @@ interface User {
   role_description: string;
   created_at: string;
   updated_at: string;
+  avatar_url?: string | null;
 }
 
 interface AuthContextType {
@@ -17,6 +18,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
+  refreshProfile: () => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -42,6 +44,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!token && !!user;
 
+  const refreshProfile = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/profile`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  }, [token]);
+
   // Fetch user profile when token exists
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -63,17 +85,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
+        } else if (response.status >= 500) {
+          // Server error (e.g. DB schema lag): don't destroy a fresh login
+          console.error('Profile fetch failed (server):', response.status);
         } else {
-          // Token is invalid, remove it
+          // 4xx: token invalid, user gone, or forbidden
           localStorage.removeItem('token');
           setToken(null);
           setUser(null);
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -135,6 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     logout,
+    refreshProfile,
     isLoading,
     isAuthenticated,
   };

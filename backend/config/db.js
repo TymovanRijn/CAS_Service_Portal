@@ -18,8 +18,14 @@ const pool = new Pool({
 
 const connectDB = async () => {
   try {
-    await pool.connect();
+    await pool.query('SELECT 1');
     console.log('Database connected');
+    await pool.query(
+      'ALTER TABLE Users ADD COLUMN IF NOT EXISTS avatar_filename VARCHAR(255)'
+    );
+    await pool.query(
+      'ALTER TABLE KnowledgeBaseArticles ADD COLUMN IF NOT EXISTS image_filename VARCHAR(500)'
+    );
   } catch (err) {
     console.error('Database connection error', err);
     process.exit(1);

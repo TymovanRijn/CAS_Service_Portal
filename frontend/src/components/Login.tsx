@@ -113,8 +113,14 @@ export const Login: React.FC = () => {
         </Card>
         
         <div className="text-center mt-6 text-sm text-muted-foreground">
-          <p>Schiphol Security Asset Coordination</p>
-          <p className="mt-1">Version 1.0</p>
+          <p>Security Asset Coordination</p>
+          {process.env.REACT_APP_BUILD_NUMBER ? (
+            <p className="mt-1 tabular-nums text-xs opacity-90" title={process.env.REACT_APP_BUILD_NUMBER}>
+              Build {process.env.REACT_APP_BUILD_NUMBER}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs opacity-75">Ontwikkelomgeving (geen deployment-build)</p>
+          )}
         </div>
       </div>
     </div>

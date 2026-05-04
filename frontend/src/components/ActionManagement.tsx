@@ -373,14 +373,14 @@ export const ActionManagement: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-3 px-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Acties</h1>
-          <p className="mt-1 text-sm text-slate-600 sm:text-base">Overzicht, oppakken en voltooien</p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+        <div className="hidden lg:block">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Acties</h1>
+          <p className="mt-1 text-base text-slate-600">Overzicht, oppakken en voltooien</p>
         </div>
         <Button
           onClick={() => setIsCreateModalOpen(true)}
-          className="h-11 w-full touch-manipulation shadow-sm sm:h-10 sm:w-auto"
+          className="h-11 w-full shrink-0 touch-manipulation shadow-sm lg:h-10 lg:w-auto"
         >
           <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -502,6 +502,7 @@ export const ActionManagement: React.FC = () => {
               ? 'Zelfde filters als elders; archival betekent meer historie.'
               : 'Verfijn de lijst met zoekwoord, status, prioriteit en toewijzing.'
           }
+          minimalMobileChrome
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {/* Search */}

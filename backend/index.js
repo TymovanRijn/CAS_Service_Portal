@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 require('dotenv').config();
 const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/auth');
@@ -11,6 +12,7 @@ const userRoutes = require('./routes/users');
 const kennisbankRoutes = require('./routes/kennisbank');
 const scheduleRoutes = require('./routes/schedules');
 const cors = require('cors');
+const multer = require('multer');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -64,6 +66,7 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Test route
 app.get('/', (req, res) => {
@@ -80,6 +83,21 @@ app.use('/api/admin', userRoutes);
 app.use('/api', categoryRoutes);
 app.use('/api/kennisbank', kennisbankRoutes);
 app.use('/api/schedules', scheduleRoutes);
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'Bestand te groot voor deze upload. Probeer een kleiner bestand.' });
+    }
+    return res.status(400).json({ message: err.message || 'Upload mislukt' });
+  }
+  if (err && typeof err.message === 'string') {
+    if (err.message.includes('Alleen afbeeldingen') || err.message.includes('Multipart')) {
+      return res.status(400).json({ message: err.message });
+    }
+  }
+  next(err);
+});
 
 // Listen on all interfaces (0.0.0.0) for network access
 app.listen(port, '0.0.0.0', () => {

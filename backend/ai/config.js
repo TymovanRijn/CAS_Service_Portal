@@ -6,7 +6,7 @@ const AI_CONFIG = {
   // Ollama Configuration
   ollama: {
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'gemma4:e4b',
+    model: process.env.OLLAMA_MODEL || 'llama3.2:1b',
     timeout: 120000, // 2 minutes (model needs time to load on first use)
     temperature: 0.7,
     maxTokens: 1000, // Increased for better summaries
@@ -30,8 +30,8 @@ const AI_CONFIG = {
       schedule: '0 0 1 * *', // First day of month at midnight
       maxHistoryMonths: 12,
       useRealAI: true, // Enable real AI generation
-      summaryModel: 'gemma4:e4b',
-      analysisModel: 'gemma4:e4b'
+      summaryModel: 'llama3.2:1b',
+      analysisModel: 'llama3.2:1b'
     },
     trendDetection: {
       enabled: true,

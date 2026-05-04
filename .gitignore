@@ -16,6 +16,7 @@ frontend/build/
 backend/dist/
 
 # misc
+scripts/.deploy_build_seq
 .DS_Store
 # Local env & secrets (never commit; use backend/.env.example, frontend/.env.example)
 .env
