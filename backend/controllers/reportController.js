@@ -1,6 +1,21 @@
 const { pool } = require('../config/db');
 const puppeteer = require('puppeteer');
 
+/** Veilige tekst voor HTML/PDF */
+const escapeHtml = (s) => {
+  if (s == null || s === '') return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+
+const normalizeLoc = (name) => {
+  const n = (name || '').trim();
+  return n === '' ? 'Algemeen' : n;
+};
+
 // Generate daily report for a specific date
 const generateDailyReport = async (req, res) => {
   const { date } = req.query; // Expected format: YYYY-MM-DD
@@ -19,21 +34,24 @@ const generateDailyReport = async (req, res) => {
       return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    // Get incidents for the specified date
+    /* Incidenten: gemeld óf gesloten op deze datum (overlap met SAC-dagstaat) */
     const incidentsQuery = `
-      SELECT 
+      SELECT DISTINCT ON (i.id)
         i.*,
-        c.name as category_name,
-        l.name as location_name,
-        creator.username as created_by_name
+        c.name AS category_name,
+        l.name AS location_name,
+        creator.username AS created_by_name,
+        (DATE(i.created_at) = $1::date) AS reported_this_day,
+        (DATE(i.updated_at) = $1::date AND i.status = 'Closed') AS closed_this_day
       FROM Incidents i
       LEFT JOIN Categories c ON i.category_id = c.id
       LEFT JOIN Locations l ON i.location_id = l.id
       LEFT JOIN Users creator ON i.created_by = creator.id
-      WHERE DATE(i.created_at) = $1
-      ORDER BY i.created_at DESC
+      WHERE DATE(i.created_at) = $1::date
+         OR (DATE(i.updated_at) = $1::date AND i.status = 'Closed')
+      ORDER BY i.id, i.updated_at DESC
     `;
-    
+
     const incidentsResult = await client.query(incidentsQuery, [date]);
     const incidents = incidentsResult.rows;
 
@@ -53,7 +71,7 @@ const generateDailyReport = async (req, res) => {
       LEFT JOIN Users creator ON a.created_by = creator.id
       LEFT JOIN Categories c ON i.category_id = c.id
       LEFT JOIN Locations l ON i.location_id = l.id
-      WHERE DATE(a.created_at) = $1 OR DATE(a.updated_at) = $1
+      WHERE DATE(a.created_at) = $1::date OR DATE(a.updated_at) = $1::date
       ORDER BY a.created_at DESC
     `;
     
@@ -75,34 +93,6 @@ const generateDailyReport = async (req, res) => {
     const statsResult = await client.query(statsQuery, [date]);
     const stats = statsResult.rows[0];
 
-    // Get category breakdown
-    const categoryQuery = `
-      SELECT 
-        c.name as category_name,
-        COUNT(i.id) as incident_count
-      FROM Categories c
-      LEFT JOIN Incidents i ON c.id = i.category_id AND DATE(i.created_at) = $1
-      GROUP BY c.id, c.name
-      ORDER BY incident_count DESC
-    `;
-    
-    const categoryResult = await client.query(categoryQuery, [date]);
-    const categoryBreakdown = categoryResult.rows;
-
-    // Get location breakdown
-    const locationQuery = `
-      SELECT 
-        l.name as location_name,
-        COUNT(i.id) as incident_count
-      FROM Locations l
-      LEFT JOIN Incidents i ON l.id = i.location_id AND DATE(i.created_at) = $1
-      GROUP BY l.id, l.name
-      ORDER BY incident_count DESC
-    `;
-    
-    const locationResult = await client.query(locationQuery, [date]);
-    const locationBreakdown = locationResult.rows;
-
     client.release();
 
     // Generate HTML for PDF
@@ -110,9 +100,7 @@ const generateDailyReport = async (req, res) => {
       date,
       incidents,
       actions,
-      stats,
-      categoryBreakdown,
-      locationBreakdown
+      stats
     });
 
     // Generate PDF using Puppeteer with retry mechanism
@@ -174,7 +162,7 @@ const generateDailyReport = async (req, res) => {
           page.pdf({
             format: 'A4',
             printBackground: true,
-            landscape: true,
+            landscape: false,
             margin: {
               top: '10mm',
               right: '10mm',
@@ -276,514 +264,301 @@ const generateDailyReport = async (req, res) => {
   }
 };
 
-// Generate HTML content for the PDF report
-const generateReportHTML = ({ date, incidents, actions, stats, categoryBreakdown, locationBreakdown }) => {
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('nl-NL', {
+// Generate HTML for PDF — SAC-dagrapport (memo, per locatie, open vs afgerond)
+const generateReportHTML = ({ date, incidents, actions, stats }) => {
+  const formatDateNl = () =>
+    new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', {
       weekday: 'long',
-      year: 'numeric',
+      day: 'numeric',
       month: 'long',
-      day: 'numeric'
+      year: 'numeric'
     });
-  };
 
-  const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('nl-NL', {
-      hour: '2-digit',
-      minute: '2-digit'
+  /** Titel zoals SAC-voorbeeld: "13 april 2026" */
+  const formatDateShortNl = () =>
+    new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
-  };
 
-  const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleString('nl-NL', {
+  const formatDmY = () =>
+    new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'numeric',
+      year: 'numeric'
+    });
+
+  const formatTime = (iso) =>
+    iso
+      ? new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+      : '';
+
+  const formatGen = () =>
+    new Date().toLocaleString('nl-NL', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+
+  const boolish = (v) => v === true || v === 't' || v === 'true';
+
+  const incStatusNl = (s) => {
+    const x = String(s || '').toLowerCase();
+    if (x === 'open') return 'Open';
+    if (x === 'in progress') return 'In behandeling';
+    if (x === 'closed') return 'Gesloten';
+    return escapeHtml(s || '—');
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority?.toLowerCase()) {
-      case 'high': return '#dc2626';
-      case 'medium': return '#ea580c';
-      case 'low': return '#16a34a';
-      default: return '#6b7280';
+  const actionStatusNl = (s) => {
+    const x = String(s || '').toLowerCase();
+    if (x === 'pending') return 'Openstaand';
+    if (x === 'in progress') return 'In behandeling';
+    if (x === 'completed') return 'Voltooid';
+    return escapeHtml(s || '—');
+  };
+
+  const locKeyFromIncident = (i) => normalizeLoc(i.location_name);
+  const locKeyFromAction = (a) => normalizeLoc(a.location_name);
+
+  const truncate = (t, max = 560) => {
+    const plain = String(t || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (plain.length <= max) return escapeHtml(plain);
+    return `${escapeHtml(plain.slice(0, max))}…`;
+  };
+
+  const coordinators = new Set();
+  incidents.forEach((i) => {
+    if (i.created_by_name) coordinators.add(String(i.created_by_name).trim());
+  });
+  actions.forEach((a) => {
+    if (a.created_by_name) coordinators.add(String(a.created_by_name).trim());
+    if (a.assigned_to_name) coordinators.add(String(a.assigned_to_name).trim());
+  });
+  const sacLineHtml =
+    coordinators.size > 0
+      ? escapeHtml([...coordinators].sort((a, b) => a.localeCompare(b, 'nl')).join(', '))
+      : '—';
+
+  /** Bijzonderheden uit KPI / prioriteit (zelfde velden als incidentformulier) */
+  const bijSeen = new Set();
+  const bijLines = [];
+  const pushBij = (txt) => {
+    const key = txt.slice(0, 140);
+    if (bijSeen.has(key)) return;
+    bijSeen.add(key);
+    bijLines.push(`<div class="bij-line">${txt}</div>`);
+  };
+
+  incidents.forEach((i) => {
+    const prio = String(i.priority || '').toLowerCase();
+    if (prio === 'high') {
+      pushBij(
+        `Prioriteit Hoog · #${i.id} — ${escapeHtml(
+          (i.title || '').trim()
+        )} (${escapeHtml(locKeyFromIncident(i))}).`
+      );
     }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'open': return '#2563eb';
-      case 'in progress': return '#ca8a04';
-      case 'closed': return '#16a34a';
-      case 'pending': return '#ea580c';
-      case 'completed': return '#16a34a';
-      default: return '#6b7280';
+    if (boolish(i.requires_escalation)) {
+      pushBij(
+        `Escalatie / nabellen · #${i.id}${i.escalation_reason ? ` — ${escapeHtml(String(i.escalation_reason).trim())}` : ''}`
+      );
     }
+    if (boolish(i.was_unregistered_incident)) {
+      pushBij(`Niet‑geregistreerd incident (gemarkeerd SAC) · #${i.id}`);
+    }
+    if (boolish(i.service_party_arrived_late)) {
+      pushBij(`Service party te laat · #${i.id}`);
+    }
+    if (boolish(i.incorrect_diagnosis)) {
+      pushBij(`Verkeerde diagnose (service party) · #${i.id}`);
+    }
+    if (boolish(i.multiple_service_parties_needed)) {
+      pushBij(`Meerdere service parties nodig · #${i.id}`);
+    }
+  });
+
+  /** Per locatie: incidenten en acties (acties naar locatie gekoppelde incident‑locatie) */
+  const byLoc = new Map();
+  const blk = (k) => {
+    if (!byLoc.has(k))
+      byLoc.set(k, { incidents: [], openActions: [], doneActions: [] });
+    return byLoc.get(k);
   };
 
-  return `
-    <!DOCTYPE html>
-    <html lang="nl">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>CAS Dagrapport - ${formatDate(date)}</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          background: #fff;
-        }
-        
-        .header {
-          background: #1e40af;
-          color: white;
-          padding: 20px;
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        
-        .header h1 {
-          font-size: 24px;
-          font-weight: 700;
-          margin-bottom: 8px;
-        }
-        
-        .header p {
-          font-size: 16px;
-          opacity: 0.9;
-        }
-        
-        .container {
-          max-width: 100%;
-          margin: 0 auto;
-          padding: 0 10px;
-        }
-        
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 12px;
-          margin-bottom: 24px;
-        }
-        
-        .stat-card {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 16px;
-          text-align: center;
-        }
-        
-        .stat-number {
-          font-size: 28px;
-          font-weight: 700;
-          color: #1e40af;
-          margin-bottom: 4px;
-        }
-        
-        .stat-label {
-          font-size: 12px;
-          color: #64748b;
-          font-weight: 500;
-        }
-        
-        .section {
-          margin-bottom: 32px;
-        }
-        
-        .section-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 20px;
-          padding-bottom: 10px;
-          border-bottom: 3px solid #3b82f6;
-        }
-        
-        /* Card-based layout for incidents and actions */
-        .incidents-list, .actions-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        
-        .incident-card, .action-card {
-          background: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 20px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-          page-break-inside: avoid;
-          margin-bottom: 16px;
-        }
-        
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #f1f5f9;
-        }
-        
-        .card-title-section {
-          flex: 1;
-          margin-right: 16px;
-        }
-        
-        .card-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 8px;
-          line-height: 1.3;
-        }
-        
-        .card-description {
-          font-size: 13px;
-          color: #64748b;
-          line-height: 1.6;
-          margin-top: 8px;
-        }
-        
-        .card-badges {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          align-items: flex-end;
-        }
-        
-        .priority-badge, .status-badge {
-          display: inline-block;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 600;
-          color: white;
-          text-transform: uppercase;
-          white-space: nowrap;
-          letter-spacing: 0.5px;
-        }
-        
-        .card-details {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
-          margin-top: 16px;
-        }
-        
-        .detail-item {
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .detail-label {
-          font-size: 11px;
-          font-weight: 600;
-          color: #64748b;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 6px;
-        }
-        
-        .detail-value {
-          font-size: 14px;
-          color: #1e293b;
-          font-weight: 500;
-        }
-        
-        .card-time {
-          font-size: 12px;
-          color: #94a3b8;
-          font-weight: 500;
-          margin-bottom: 12px;
-        }
-        
-        /* Legacy table styles for backwards compatibility */
-        .table {
-          width: 100%;
-          border-collapse: collapse;
-          background: white;
-          border-radius: 8px;
-          overflow: visible;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .breakdown-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 24px;
-        }
-        
-        .breakdown-card {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 16px;
-        }
-        
-        .breakdown-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #1e293b;
-          margin-bottom: 12px;
-        }
-        
-        .breakdown-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 0;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .breakdown-item:last-child {
-          border-bottom: none;
-        }
-        
-        .breakdown-count {
-          font-weight: 600;
-          color: #1e40af;
-        }
-        
-        .footer {
-          margin-top: 50px;
-          padding: 20px;
-          text-align: center;
-          color: #64748b;
-          font-size: 12px;
-          border-top: 1px solid #e2e8f0;
-        }
-        
-        .no-data {
-          text-align: center;
-          color: #64748b;
-          font-style: italic;
-          padding: 40px;
-        }
-        
-        @media print {
-          .section {
-            page-break-inside: avoid;
-          }
-          
-          .incident-card, .action-card {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-          
-          .card-header {
-            page-break-inside: avoid;
-          }
-        }
-        
-        /* Ensure all content is visible */
-        body {
-          overflow: visible;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>CAS Service Portal</h1>
-        <p>Dagrapport voor ${formatDate(date)}</p>
-      </div>
-      
-      <div class="container">
-        <!-- Statistics Overview -->
-        <div class="section">
-          <h2 class="section-title">📊 Dagstatistieken</h2>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number">${stats.incidents_created || 0}</div>
-              <div class="stat-label">Nieuwe Incidenten</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">${stats.incidents_closed || 0}</div>
-              <div class="stat-label">Gesloten Incidenten</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">${stats.actions_created || 0}</div>
-              <div class="stat-label">Nieuwe Acties</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number">${stats.actions_completed || 0}</div>
-              <div class="stat-label">Voltooide Acties</div>
-            </div>
-          </div>
-        </div>
+  incidents.forEach((i) => blk(locKeyFromIncident(i)).incidents.push(i));
 
-        <!-- Priority Breakdown -->
-        <div class="section">
-          <h2 class="section-title">🎯 Prioriteitsverdeling</h2>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number" style="color: #dc2626;">${stats.high_priority_incidents || 0}</div>
-              <div class="stat-label">Hoge Prioriteit</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" style="color: #ea580c;">${stats.medium_priority_incidents || 0}</div>
-              <div class="stat-label">Gemiddelde Prioriteit</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" style="color: #16a34a;">${stats.low_priority_incidents || 0}</div>
-              <div class="stat-label">Lage Prioriteit</div>
-            </div>
-          </div>
-        </div>
+  actions.forEach((a) => {
+    const b = blk(locKeyFromAction(a));
+    const st = String(a.status || '').toLowerCase();
+    if (st === 'completed') b.doneActions.push(a);
+    else b.openActions.push(a);
+  });
 
-        <!-- Category and Location Breakdown -->
-        <div class="breakdown-grid">
-          <div class="breakdown-card">
-            <h3 class="breakdown-title">📁 Verdeling per Categorie</h3>
-            ${categoryBreakdown.filter(cat => cat.incident_count > 0).length > 0 ? 
-              categoryBreakdown.filter(cat => cat.incident_count > 0).map(cat => `
-                <div class="breakdown-item">
-                  <span>${cat.category_name}</span>
-                  <span class="breakdown-count">${cat.incident_count}</span>
-                </div>
-              `).join('') : 
-              '<div class="no-data">Geen incidenten vandaag</div>'
-            }
-          </div>
-          
-          <div class="breakdown-card">
-            <h3 class="breakdown-title">📍 Verdeling per Locatie</h3>
-            ${locationBreakdown.filter(loc => loc.incident_count > 0).length > 0 ? 
-              locationBreakdown.filter(loc => loc.incident_count > 0).map(loc => `
-                <div class="breakdown-item">
-                  <span>${loc.location_name}</span>
-                  <span class="breakdown-count">${loc.incident_count}</span>
-                </div>
-              `).join('') : 
-              '<div class="no-data">Geen incidenten vandaag</div>'
-            }
-          </div>
-        </div>
+  const sortedLocs = [...byLoc.keys()].sort((a, b) => {
+    if (a === 'Algemeen') return -1;
+    if (b === 'Algemeen') return 1;
+    return a.localeCompare(b, 'nl', { sensitivity: 'base' });
+  });
 
-        <!-- Incidents Section -->
-        <div class="section">
-          <h2 class="section-title">🚨 Incidenten van ${formatDate(date)}</h2>
-          ${incidents.length > 0 ? `
-            <div class="incidents-list">
-              ${incidents.map(incident => `
-                <div class="incident-card">
-                  <div class="card-time">🕐 ${formatTime(incident.created_at)}</div>
-                  <div class="card-header">
-                    <div class="card-title-section">
-                      <div class="card-title">${incident.title}</div>
-                      ${incident.description ? `
-                        <div class="card-description">${incident.description}</div>
-                      ` : ''}
-                    </div>
-                    <div class="card-badges">
-                      <span class="priority-badge" style="background-color: ${getPriorityColor(incident.priority)};">
-                        ${incident.priority}
-                      </span>
-                      <span class="status-badge" style="background-color: ${getStatusColor(incident.status)};">
-                        ${incident.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="card-details">
-                    <div class="detail-item">
-                      <div class="detail-label">Categorie</div>
-                      <div class="detail-value">${incident.category_name || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                      <div class="detail-label">Locatie</div>
-                      <div class="detail-value">${incident.location_name || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                      <div class="detail-label">Aangemaakt door</div>
-                      <div class="detail-value">${incident.created_by_name || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                      <div class="detail-label">Datum & Tijd</div>
-                      <div class="detail-value">${formatDateTime(incident.created_at)}</div>
-                    </div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          ` : '<div class="no-data">Geen incidenten geregistreerd op deze dag</div>'}
-        </div>
+  const incidentBlock = (i) => {
+    const chips = [];
+    if (boolish(i.reported_this_day)) chips.push('gemeld vandaag');
+    if (boolish(i.closed_this_day)) chips.push('afgesloten vandaag');
+    const chipTxt = chips.length ? ` <span class="chip">${chips.join(' · ')}</span>` : '';
+    const sol = i.possible_solution ? ` Mogelijke stap: ${truncate(i.possible_solution, 220)}` : '';
+    const cat = i.category_name ? `${escapeHtml(i.category_name)} · ` : '';
+    const who = i.created_by_name
+      ? ` · ${escapeHtml(i.created_by_name)} (${formatTime(i.created_at)})`
+      : '';
+    return `<p class="entry"><strong>#${i.id}</strong>${chipTxt}<br/><strong>${escapeHtml(
+      (i.title || '').trim()
+    )}</strong><br/><span class="meta">${cat}${incStatusNl(i.status)} · prio ${escapeHtml(
+      String(i.priority || '—')
+    )}${who}</span><br/><span class="body">${truncate(i.description, 560)}</span>${sol ? `<br/><span class="body">${sol}</span>` : ''}</p>`;
+  };
 
-        <!-- Actions Section -->
-        <div class="section">
-          <h2 class="section-title">⚡ Acties van ${formatDate(date)}</h2>
-          ${actions.length > 0 ? `
-            <div class="actions-list">
-              ${actions.map(action => `
-                <div class="action-card">
-                  <div class="card-time">🕐 ${formatTime(action.created_at)}</div>
-                  <div class="card-header">
-                    <div class="card-title-section">
-                      <div class="card-title">${action.action_description || 'Geen beschrijving'}</div>
-                      ${action.incident_title ? `
-                        <div class="card-description">
-                          <strong>Gerelateerd incident:</strong> ${action.incident_title}
-                          ${action.incident_priority ? `
-                            <span class="priority-badge" style="background-color: ${getPriorityColor(action.incident_priority)}; margin-left: 8px; font-size: 9px; padding: 3px 8px;">
-                              ${action.incident_priority}
-                            </span>
-                          ` : ''}
-                        </div>
-                      ` : ''}
-                    </div>
-                    <div class="card-badges">
-                      <span class="status-badge" style="background-color: ${getStatusColor(action.status)};">
-                        ${action.status === 'Pending' ? 'Openstaand' : 
-                          action.status === 'In Progress' ? 'In Behandeling' : 
-                          action.status === 'Completed' ? 'Voltooid' : action.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="card-details">
-                    <div class="detail-item">
-                      <div class="detail-label">Toegewezen aan</div>
-                      <div class="detail-value">${action.assigned_to_name || 'Niet toegewezen'}</div>
-                    </div>
-                    <div class="detail-item">
-                      <div class="detail-label">Aangemaakt door</div>
-                      <div class="detail-value">${action.created_by_name || '-'}</div>
-                    </div>
-                    ${action.incident_title ? `
-                      <div class="detail-item">
-                        <div class="detail-label">Categorie</div>
-                        <div class="detail-value">${action.category_name || '-'}</div>
-                      </div>
-                      <div class="detail-item">
-                        <div class="detail-label">Locatie</div>
-                        <div class="detail-value">${action.location_name || '-'}</div>
-                      </div>
-                    ` : ''}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          ` : '<div class="no-data">Geen acties geregistreerd op deze dag</div>'}
-        </div>
-      </div>
+  const actionBlock = (a) => {
+    const incRef = a.incident_id ? ` incident #${a.incident_id}` : '';
+    const asg = a.assigned_to_name ? ` · ${escapeHtml(a.assigned_to_name)}` : '';
+    return `<p class="entry act">${actionStatusNl(a.status)}${incRef}${asg}<br/><span class="body">${truncate(
+      a.action_description,
+      420
+    )}</span>${a.incident_title ? `<br/><span class="meta">Incident: ${escapeHtml((a.incident_title || '').trim())}</span>` : ''}</p>`;
+  };
 
-      <div class="footer">
-        <p>Gegenereerd op ${formatDateTime(new Date().toISOString())} | CAS Service Portal</p>
-      </div>
-    </body>
-    </html>
-  `;
+  let locHtml = '';
+  for (const loc of sortedLocs) {
+    const { incidents: incArr, openActions, doneActions } = byLoc.get(loc);
+    if (!incArr.length && !openActions.length && !doneActions.length) continue;
+
+    const openInc = incArr.filter((i) => String(i.status || '').toLowerCase() !== 'closed');
+    const closedToday = incArr.filter(
+      (i) =>
+        String(i.status || '').toLowerCase() === 'closed' && boolish(i.closed_this_day)
+    );
+
+    let inner = '';
+
+    if (openInc.length) {
+      inner += `<div class="sub">Incidenten nog open</div>${openInc.map(incidentBlock).join('')}`;
+    }
+
+    if (closedToday.length) {
+      inner += `<div class="sub">Afgerond op rapportdatum / meegenomen dossier</div>${closedToday
+        .map(incidentBlock)
+        .join('')}`;
+    }
+
+    if (openActions.length) {
+      inner += `<div class="sub">Openstaande acties</div>${openActions.map(actionBlock).join('')}`;
+    }
+    if (doneActions.length) {
+      inner += `<div class="sub">Vandaag afgeronde acties (of gemarkeerd voltooid op deze datum)</div>${doneActions
+        .map(actionBlock)
+        .join('')}`;
+    }
+
+    locHtml += `<section class="loc-block"><p class="loc-head">${escapeHtml(loc)}:</p>${inner || '<p class="muted tiny">Geen inhoud onder deze kop.</p>'}</section>`;
+  }
+
+  if (!locHtml) {
+    locHtml =
+      '<p class="muted">Geen incidenten of acties waarbij deze datum voorkomt als aanmaak‑ of mutatiedatum.</p>';
+  }
+
+  /** Opvolgdienst — alles nog open uit dit dossier‑overzicht */
+  const openIncGlob = incidents.filter((i) => String(i.status || '').toLowerCase() !== 'closed');
+  const openActGlob = actions.filter((a) => String(a.status || '').toLowerCase() !== 'completed');
+
+  let followHtml = '';
+  if (openIncGlob.length === 0 && openActGlob.length === 0) {
+    followHtml =
+      '<p class="muted tiny">Geen openstaande incidenten of niet‑voltooide acties in bovenstaand overzicht.</p>';
+  } else {
+    if (openIncGlob.length) {
+      followHtml += `<div class="sub">Openstaande incidenten (prioriteit voor vervolg)</div><ul>${openIncGlob
+        .map(
+          (i) =>
+            `<li><strong>#${i.id}</strong> ${escapeHtml((i.title || '').trim())} — ${escapeHtml(
+              locKeyFromIncident(i)
+            )}, ${escapeHtml(String(i.priority || '').trim())}, ${incStatusNl(i.status)}</li>`
+        )
+        .join('')}</ul>`;
+    }
+    if (openActGlob.length) {
+      followHtml += `<div class="sub">Openstaande acties</div><ul>${openActGlob
+        .map(
+          (a) =>
+            `<li>${truncate(a.action_description, 200)} <span class="meta">(#${escapeHtml(String(a.incident_id || '?'))}, ${escapeHtml(
+              locKeyFromAction(a)
+            )})</span></li>`
+        )
+        .join('')}</ul>`;
+    }
+  }
+
+  const statLine =
+    `Nieuwe incidenten (alleen‑vandaag aangemaakt): ${stats.incidents_created ?? 0} · Gesloten vandaag: ${stats.incidents_closed ?? 0} · ` +
+    `Acties nieuw vandaag: ${stats.actions_created ?? 0} · Afgeronde acties vandaag: ${stats.actions_completed ?? 0}`;
+
+  return `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Dagrapportage SAC — ${formatDateNl()}</title>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; font-size: 11pt; line-height: 1.42; padding: 0 6mm 8mm; }
+    .doc-title { font-size: 13pt; font-weight: 700; text-align: center; margin: 8px 0 14px; }
+    .kv { border-collapse: collapse; width: 100%; font-size: 10pt; margin-bottom: 16px; page-break-inside: avoid; }
+    .kv td { padding: 4px 8px 4px 0; vertical-align: top; border-bottom: 1px solid #ddd; }
+    .kv td:first-child { width: 7.8em; font-weight: 600; color: #333; white-space: nowrap; }
+    h2.section { font-size: 10.5pt; font-weight: 700; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #222; padding-bottom: 3px; }
+    .loc-block { margin: 14px 0; page-break-inside: avoid; }
+    .loc-head { font-weight: 700; font-size: 11pt; margin: 0 0 6px; }
+    .sub { font-size: 9.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #444; margin: 10px 0 4px; }
+    .entry { margin: 0 0 8px 2px; padding-left: 10px; border-left: 2px solid #ccc; font-size: 10.5pt; }
+    .entry.act { border-left-color: #7c8db0; }
+    .chip { font-size: 8.5pt; font-weight: 600; color: #374151; margin-left: 4px; }
+    .meta { font-size: 9.5pt; color: #4b5563; }
+    .body { font-size: 10.5pt; color: #111; }
+    .muted { color: #6b7280; font-style: italic; font-size: 10pt; }
+    .muted.tiny { font-size: 9pt; }
+    .bij-line { padding: 5px 0 5px 12px; border-left: 2px solid #9ca3af; margin-bottom: 6px; font-size: 10.5pt; }
+    ul { margin: 4px 0 12px 18px; padding: 0; }
+    ul li { margin-bottom: 4px; font-size: 10.5pt; }
+    footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt; color: #6b7280; text-align: center; page-break-before: avoid; }
+  </style>
+</head>
+<body>
+  <p class="doc-title">Dagrapportage, Security Assets Coördinator · ${escapeHtml(formatDateShortNl())}</p>
+  <table class="kv" role="presentation">
+    <tr><td>SAC / registratie</td><td>${sacLineHtml}</td></tr>
+    <tr><td>Datum rapport</td><td>${escapeHtml(formatDmY())}</td></tr>
+    <tr><td>Start dienst</td><td>—</td></tr>
+    <tr><td>Einde dienst</td><td>—</td></tr>
+  </table>
+
+  <h2 class="section">Bijzonderheden</h2>
+  ${bijLines.length ? bijLines.join('') : '<p class="muted">Geen door het systeem gemarkeerde bijzonderheden (KPI) in het geselecteerde dossier.</p>'}
+
+  <h2 class="section">Algemeen (samenvatting)</h2>
+  <p class="muted tiny">${escapeHtml(statLine)}</p>
+
+  <h2 class="section">Per locatie</h2>
+  ${locHtml}
+
+  <h2 class="section">Opvolging / aandachtspunten</h2>
+  ${followHtml}
+
+  <footer>CAS Service Portal · gegenereerd ${escapeHtml(formatGen())}</footer>
+</body>
+</html>`;
 };
 
 // Get available report dates (dates with incidents or actions)
@@ -792,14 +567,16 @@ const getAvailableReportDates = async (req, res) => {
     const client = await pool.connect();
     
     const query = `
-      SELECT DISTINCT DATE(created_at) as report_date
-      FROM (
-        SELECT created_at FROM Incidents
+      WITH days AS (
+        SELECT DATE(created_at) AS d FROM Incidents
         UNION
-        SELECT created_at FROM Actions
+        SELECT DATE(updated_at) FROM Incidents WHERE status = 'Closed'
         UNION
-        SELECT updated_at as created_at FROM Actions WHERE updated_at != created_at
-      ) combined_dates
+        SELECT DATE(created_at) FROM Actions
+        UNION
+        SELECT DATE(updated_at) FROM Actions WHERE updated_at IS DISTINCT FROM created_at
+      )
+      SELECT DISTINCT d AS report_date FROM days WHERE d IS NOT NULL
       ORDER BY report_date DESC
       LIMIT 30
     `;

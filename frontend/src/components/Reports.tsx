@@ -351,14 +351,14 @@ export const Reports: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-medium mb-2">📊 Rapport Inhoud</h4>
+              <h4 className="font-medium mb-2">Rapportinhoud (PDF)</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Dagstatistieken (nieuwe/gesloten incidenten, acties)</li>
-                <li>• Prioriteitsverdeling van incidenten</li>
-                <li>• Verdeling per categorie en locatie</li>
-                <li>• Gedetailleerde lijst van alle incidenten</li>
-                <li>• Gedetailleerde lijst van alle acties</li>
-                <li>• Tijdstempel van rapportgeneratie</li>
+                <li>• Opmaak naar SAC‑dagrapport: titelblok met registraties van die dag</li>
+                <li>• Bijzonderheden uit KPI‑velden (escalatie, hoge prio, SAC‑markers)</li>
+                <li>• Per locatie: open incidenten, vandaag afgesloten dossiers, open en afgeronde acties</li>
+                <li>• Afsluitende opvolglijst met wat nog open staat</li>
+                <li>• Eén regel kernstatistieken (dagtotalen bij aanmaak en afsluiting)</li>
+                <li>• Tijdstempel bij generatie (onderaan)</li>
               </ul>
             </div>
             <div>
@@ -367,7 +367,8 @@ export const Reports: React.FC = () => {
                 <li>• Selecteer een datum uit de kalendar of gebruik snelle acties</li>
                 <li>• Klik op "PDF Rapport Downloaden" om het rapport te genereren</li>
                 <li>• Het PDF-bestand wordt automatisch gedownload</li>
-                <li>• Rapporten bevatten alleen data van de geselecteerde dag</li>
+                <li>• Incidenten worden meegenomen als ze op deze datum worden gemeld, of gesloten</li>
+                <li>• Acties als ze op deze datum zijn aangemaakt of bijgewerkt</li>
                 <li>• Alleen Admin en Dashboard Viewer rollen hebben toegang</li>
               </ul>
             </div>
